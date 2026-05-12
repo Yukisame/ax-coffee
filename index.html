@@ -2245,57 +2245,73 @@ function setTheme(name){
 
 function applyTheme(){
     var name=localStorage.getItem('ax_theme')||'默认深色';
-    var root=document.documentElement;
+    var existing=document.getElementById('axThemeStyle');
+    if(existing)existing.remove();
 
     var themes={
         '默认深色':{
-            bg:'#0f1114',surface:'#1a1d23',surfaceH:'#22262e',
+            bg:'#0f1114',card:'#1a1d23',cardH:'#22262e',
             bd:'#2a2e36',bdL:'#333840',
             ac:'#d4a853',tx:'#e8e4dc',txM:'#7a766e',txS:'#5a5850',
             gn:'#4caf7d',rd:'#e05555',og:'#e8a035',
-            sh:'0 2px 8px rgba(0,0,0,0.3)'
+            btnBg:'#2a2e36',btnTx:'#e8e4dc',inputBg:'#22262e',inputBd:'#333840',
+            navBg:'#1a1d23',navActive:'#22262e',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#22262e',scrollbar:'#333840'
         },
         '经典棕色':{
-            bg:'#1c1814',surface:'#282320',surfaceH:'#322c28',
+            bg:'#1c1814',card:'#282320',cardH:'#322c28',
             bd:'#3d3632',bdL:'#4a423c',
             ac:'#c8956c',tx:'#e8ddd4',txM:'#8a7e74',txS:'#6a6058',
             gn:'#6aad6a',rd:'#c85555',og:'#c8956c',
-            sh:'0 2px 8px rgba(0,0,0,0.3)'
+            btnBg:'#3d3632',btnTx:'#e8ddd4',inputBg:'#322c28',inputBd:'#4a423c',
+            navBg:'#282320',navActive:'#322c28',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#322c28',scrollbar:'#4a423c'
         },
         '极简白':{
-            bg:'#ffffff',surface:'#f8f8f8',surfaceH:'#f0f0f0',
+            bg:'#f5f5f5',card:'#ffffff',cardH:'#f0f0f0',
             bd:'#e0e0e0',bdL:'#d0d0d0',
             ac:'#333333',tx:'#222222',txM:'#888888',txS:'#aaaaaa',
             gn:'#2e8b57',rd:'#cc3333',og:'#cc8800',
-            sh:'0 2px 8px rgba(0,0,0,0.08)'
+            btnBg:'#e8e8e8',btnTx:'#222222',inputBg:'#ffffff',inputBd:'#d0d0d0',
+            navBg:'#ffffff',navActive:'#f0f0f0',modalBg:'rgba(0,0,0,0.4)',
+            thBg:'#f0f0f0',scrollbar:'#cccccc'
         },
         '森林绿':{
-            bg:'#0d1410',surface:'#162018',surfaceH:'#1e2a22',
+            bg:'#0d1410',card:'#162018',cardH:'#1e2a22',
             bd:'#283830',bdL:'#324238',
             ac:'#5aad6a',tx:'#d8e8dc',txM:'#6a8a70',txS:'#4a6a50',
             gn:'#5aad6a',rd:'#c85555',og:'#b8a040',
-            sh:'0 2px 8px rgba(0,0,0,0.3)'
+            btnBg:'#283830',btnTx:'#d8e8dc',inputBg:'#1e2a22',inputBd:'#324238',
+            navBg:'#162018',navActive:'#1e2a22',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#1e2a22',scrollbar:'#324238'
         },
         '星空蓝':{
-            bg:'#0d1117',surface:'#161b22',surfaceH:'#1c2333',
+            bg:'#0d1117',card:'#161b22',cardH:'#1c2333',
             bd:'#2a3040',bdL:'#343e50',
             ac:'#58a6ff',tx:'#d8dee8',txM:'#6a7a8e',txS:'#4a5a6e',
             gn:'#3fb950',rd:'#f85149',og:'#d29922',
-            sh:'0 2px 8px rgba(0,0,0,0.3)'
+            btnBg:'#2a3040',btnTx:'#d8dee8',inputBg:'#1c2333',inputBd:'#343e50',
+            navBg:'#161b22',navActive:'#1c2333',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#1c2333',scrollbar:'#343e50'
         },
         '玫瑰粉':{
-            bg:'#181014',surface:'#221820',surfaceH:'#2c2028',
+            bg:'#181014',card:'#221820',cardH:'#2c2028',
             bd:'#3a2834',bdL:'#483040',
             ac:'#d4739a',tx:'#e8d8e0',txM:'#8a6a78',txS:'#6a4a58',
             gn:'#6aad6a',rd:'#d45050',og:'#d49050',
-            sh:'0 2px 8px rgba(0,0,0,0.3)'
+            btnBg:'#3a2834',btnTx:'#e8d8e0',inputBg:'#2c2028',inputBd:'#483040',
+            navBg:'#221820',navActive:'#2c2028',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#2c2028',scrollbar:'#483040'
         }
     };
 
     var t=themes[name]||themes['默认深色'];
+    var root=document.documentElement;
+
+    // 设置CSS变量
     root.style.setProperty('--bg',t.bg);
-    root.style.setProperty('--card',t.surface);
-    root.style.setProperty('--card-h',t.surfaceH);
+    root.style.setProperty('--card',t.card);
+    root.style.setProperty('--card-h',t.cardH);
     root.style.setProperty('--bd',t.bd);
     root.style.setProperty('--bd-l',t.bdL);
     root.style.setProperty('--ac',t.ac);
@@ -2305,8 +2321,67 @@ function applyTheme(){
     root.style.setProperty('--gn',t.gn);
     root.style.setProperty('--rd',t.rd);
     root.style.setProperty('--og',t.og);
-    root.style.setProperty('--sh',t.sh);
+
+    // 注入覆盖样式
+    var css=[
+        'body{background:'+t.bg+'!important;color:'+t.tx+'!important}',
+        '.top-nav{background:'+t.navBg+'!important;border-color:'+t.bd+'!important}',
+        '.nav-btn{color:'+t.txM+'!important;background:transparent!important}',
+        '.nav-btn.active{color:'+t.ac+'!important;background:'+t.navActive+'!important}',
+        '.nav-btn:hover{background:'+t.cardH+'!important}',
+        '#main,#mainContent{background:'+t.bg+'!important;color:'+t.tx+'!important}',
+        '.card{background:'+t.card+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
+        '.card-l{color:'+t.txM+'!important}',
+        '.card-v{color:'+t.tx+'!important}',
+        'select.inp,input.inp,textarea.inp{background:'+t.inputBg+'!important;border-color:'+t.inputBd+'!important;color:'+t.tx+'!important}',
+        'select.inp option{background:'+t.card+'!important;color:'+t.tx+'!important}',
+        '.btn{background:'+t.btnBg+'!important;color:'+t.btnTx+'!important;border-color:'+t.bd+'!important}',
+        '.btn.p{background:'+t.ac+'!important;color:#fff!important;border:none!important}',
+        '.btn.g{background:'+t.gn+'!important;color:#fff!important;border:none!important}',
+        '.btn.d{background:'+t.rd+'!important;color:#fff!important;border:none!important}',
+        '.btn.s{background:'+t.cardH+'!important;color:'+t.txM+'!important;border:1px solid '+t.bd+'!important}',
+        '.sec,.section-label{color:'+t.ac+'!important}',
+        '.tw table,.pur-tbl{border-color:'+t.bd+'!important}',
+        '.tw th,.pur-tbl th{background:'+t.thBg+'!important;color:'+t.txM+'!important;border-color:'+t.bd+'!important}',
+        '.tw td,.pur-tbl td{border-color:'+t.bdL+'!important;color:'+t.tx+'!important}',
+        '.item-card{background:'+t.card+'!important;border-color:'+t.bd+'!important}',
+        '.pur-folder{background:transparent!important}',
+        '.pur-hdr{background:'+t.cardH+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
+        '.pur-body{border-color:'+t.bdL+'!important}',
+        '.modal{background:'+t.modalBg+'!important}',
+        '.modal-content{background:'+t.card+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
+        '.badge{background:'+t.cardH+'!important;color:'+t.txM+'!important;border:1px solid '+t.bd+'!important}',
+        '.badge.gn{background:'+t.gn+'!important;color:#fff!important;border:none!important}',
+        '.badge.rd{background:'+t.rd+'!important;color:#fff!important;border:none!important}',
+        '.badge.og{background:'+t.og+'!important;color:#fff!important;border:none!important}',
+        '.tab-btn{background:'+t.cardH+'!important;color:'+t.txM+'!important;border-color:'+t.bd+'!important}',
+        '.tab-btn.active{background:'+t.ac+'!important;color:#fff!important}',
+        '.alert-bar{background:'+t.cardH+'!important;border-color:'+t.og+'!important}',
+        '.totals-bar .card{background:'+t.card+'!important;border-color:'+t.bd+'!important}',
+        'h3,h4{color:'+t.tx+'!important}',
+        '.chart-col .chart-bar{background:'+t.ac+'!important}',
+        '.chart-lbl{color:'+t.txM+'!important}',
+        '.ico{color:'+t.txM+'!important}',
+        '.total{color:'+t.ac+'!important}',
+        '.pm-edit{background:'+t.inputBg+'!important;border:1px solid '+t.inputBd+'!important;color:'+t.tx+'!important;padding:3px 6px;border-radius:4px;font-size:75%}',
+        '.name{color:'+t.tx+'!important}',
+        '.nums{color:'+t.txM+'!important}',
+        '.nav-sep{border-color:'+t.bdL+'!important}',
+        'h2{color:'+t.tx+'!important}',
+        '.brow{background:transparent!important}',
+        'a{color:'+t.ac+'!important}',
+        '#headerDate{color:'+t.txM+'!important}',
+        '::-webkit-scrollbar{width:6px}',
+        '::-webkit-scrollbar-track{background:'+t.bg+'}',
+        '::-webkit-scrollbar-thumb{background:'+t.scrollbar+';border-radius:3px}'
+    ].join('\n');
+
+    var style=document.createElement('style');
+    style.id='axThemeStyle';
+    style.textContent=css;
+    document.head.appendChild(style);
 }
+
 
 // ========================================
 // 字体设置
