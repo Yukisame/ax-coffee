@@ -88,7 +88,7 @@ function doImportCode(c){if(!c)return;try{var d=JSON.parse(decodeURIComponent(es
 
 // ===== DATABASE =====
 var STORE='ax_cafe_v8';
-var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{sep:true},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'设置',icon:'⚙️'},{id:'ai',label:'AI',icon:'🤖'}];
+var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'设置',icon:'⚙️'},{id:'ai',label:'AI',icon:'🤖'}];
 function initDB(){return{dailyReports:[],purchases:[],expenses:[],teaItems:[],cigItems:[],alcItems:[],areaCats: {},whItems:[],damageRecords:[]}}
 
 // ========================================
@@ -1978,7 +1978,7 @@ function rAI() {
     var h = '';
 
     h += '<div style="margin-bottom:14px;padding:12px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r)">';
-    h += '<div style="font-size:.78rem;color:var(--tx-s)">MiMo AI 助手，基于小米MiMo大模型。所有功能需要先在备份页配置API。</div>';
+    h += '<div style="font-size:.78rem;color:var(--tx-s)">MiMo AI 助手，基于小米MiMo大模型。所有功能需要先在设置页配置API。</div>';
     h += '</div>';
     // 账户信息
     h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">';
@@ -2063,7 +2063,6 @@ function rAI() {
     if (el2) el2.innerHTML = '';
 }
 }
-
 // ========================================
 // 功能1：智能日报解析
 // 粘贴日报文字 → MiMo解析 → 弹窗确认 → 保存
@@ -2305,7 +2304,7 @@ function goExpenseWithCategory(cat, amount) {
 // ========================================
 function aiReceiptOCR() {
     if (!localStorage.getItem('ax_mimo_key')) {
-        toast('请先在备份页配置MiMo API');
+        toast('请先在设置页配置MiMo API');
         return;
     }
 
