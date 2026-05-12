@@ -90,7 +90,7 @@ function doImportCode(c){if(!c)return;try{var d=JSON.parse(decodeURIComponent(es
 // ===== DATABASE =====
 var STORE='ax_cafe_v8';
 var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'设置',icon:'⚙️'},{id:'ai',label:'AI',icon:'🤖'}];
-function initDB(){return{dailyReports:[],purchases:[],expenses:[],teaItems:[],cigItems:[],alcItems:[],areaCats: {},whItems:[],damageRecords:[]}}
+function initDB(){return{dailyReports:[],purchases:[],expenses:[],teaItems:[],cigItems:[],alcItems:[],areaCats: {},aiHistory:[],whItems:[],damageRecords:[]}}
 
 // ========================================
 // 初始化时给 DB 加上 areaCats 字段
@@ -608,6 +608,120 @@ function hideAILoading(){
     var el=document.getElementById('aiLoadingOverlay');
     if(el)el.remove();
     if(window._aiTimerInterval){clearInterval(window._aiTimerInterval);window._aiTimerInterval=null}
+}
+
+// ========================================
+// 保存AI分析记录
+// 参数：
+//   type    - 类型：anomaly/restock/purchase/report/analysis/ask
+//   title   - 显示标题
+//   content - AI返回的内容
+// ========================================
+function saveAIHistory(type,title,content){
+    upd(function(db){
+        if(!db.aiHistory)db.aiHistory=[];
+        db.aiHistory.unshift({
+            id:'ai_'+Date.now(),
+            type:type,
+            title:title,
+            content:content,
+            date:td(),
+            time:new Date().toLocaleTimeString()
+        });
+        // 最多保留50条
+        if(db.aiHistory.length>50)db.aiHistory=db.aiHistory.slice(0,50);
+    });
+}
+// ========================================
+// 显示AI历史记录
+// ========================================
+function showAIHistory(){
+    var history=DB.aiHistory||[];
+    var h='<h3>历史分析记录</h3>';
+
+    if(!history.length){
+        h+='<div style="text-align:center;padding:30px;color:var(--tx-m)">暂无历史记录</div>';
+        h+='<div class="brow"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h,650);
+        return;
+    }
+
+    // 类型图标映射
+    var icons={anomaly:'⚠️',restock:'📦',purchase:'🛒',report:'📊',analysis:'💡',ask:'💬'};
+
+    // 可滚动的内容区
+    h+='<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
+
+    history.forEach(function(item,idx){
+        var icon=icons[item.type]||'📝';
+        h+='<div style="background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer" onclick="showAIHistoryDetail('+idx+')">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+        h+='<div><span style="font-size:.84rem;font-weight:600">'+icon+' '+item.title+'</span></div>';
+        h+='<div style="display:flex;align-items:center;gap:8px">';
+        h+='<span style="font-size:.65rem;color:var(--tx-m)">'+item.date+' '+item.time+'</span>';
+        h+='<button class="btn s d" onclick="event.stopPropagation();delAIHistory('+idx+')">×</button>';
+        h+='</div></div>';
+        // 预览前80个字
+        h+='<div style="font-size:.72rem;color:var(--tx-s);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90%">'+item.content.substring(0,80)+'...</div>';
+        h+='</div>';
+    });
+
+    h+='</div>';
+
+    // 底部按钮
+    h+='<div class="brow" style="margin-top:12px">';
+    h+='<button class="btn d" onclick="clearAIHistory()">清空全部</button>';
+    h+='<button class="btn" onclick="closeModal()">关闭</button>';
+    h+='</div>';
+
+    showModal(h,650);
+}
+
+// ========================================
+// 显示单条历史详情
+// ========================================
+function showAIHistoryDetail(idx){
+    var history=DB.aiHistory||[];
+    var item=history[idx];
+    if(!item)return;
+    var icons={anomaly:'⚠️',restock:'📦',purchase:'🛒',report:'📊',analysis:'💡',ask:'💬'};
+    var icon=icons[item.type]||'📝';
+
+    var h='<h3>'+icon+' '+item.title+'</h3>';
+    h+='<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:10px">'+item.date+' '+item.time+'</div>';
+    h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+item.content+'</div>';
+
+    // 如果是月度报告，可以导出PDF
+    if(item.type==='report'){
+        h+='<div class="brow" style="margin-top:10px"><button class="btn p" onclick="window._aiReport={title:\''+item.title.replace(/'/g,"\\'")+'\',content:DB.aiHistory['+idx+'].content};exportReportPDF()">导出PDF</button></div>';
+    }
+
+    h+='<div class="brow" style="margin-top:10px"><button class="btn" onclick="showAIHistory()">返回列表</button><button class="btn" onclick="closeModal()">关闭</button></div>';
+
+    showModal(h,650);
+}
+
+// ========================================
+// 删除单条历史
+// ========================================
+function delAIHistory(idx){
+    if(!confirm('删除这条记录？'))return;
+    upd(function(db){
+        if(!db.aiHistory)db.aiHistory=[];
+        db.aiHistory.splice(idx,1);
+    });
+    toast('已删除');
+    showAIHistory();
+}
+
+// ========================================
+// 清空全部历史
+// ========================================
+function clearAIHistory(){
+    if(!confirm('清空所有历史分析记录？'))return;
+    upd(function(db){db.aiHistory=[]});
+    toast('已清空');
+    closeModal();
 }
 
 // ========================================
@@ -2068,6 +2182,11 @@ function rAI() {
     h += '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="aiAskQuestion()">提问</button></div>';
     h += '<div id="aiAnswer"></div>';
     h += '</div>';
+    // 历史分析
+    h+='<div class="sec">历史记录</div>';
+    h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px;cursor:pointer" onclick="showAIHistory()">';
+    h+='<div style="font-size:.84rem;font-weight:700">📜 历史分析记录</div>';
+    h+='<div style="font-size:.72rem;color:var(--tx-m);margin-top:4px">查看过往所有AI分析结果</div></div>';
 
     setMain('AI 助手', h);
     setTimeout(checkMimoAccount, 100);
@@ -2419,6 +2538,7 @@ function aiAnomaly(){
         var h='<h3>异常检测报告</h3>';
         h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
         h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        saveAIHistory('anomaly','异常检测',reply);
         showModal(h,600);
     });
 }
@@ -2440,6 +2560,7 @@ function aiRestockAlert(){
         var h='<h3>智能补货建议</h3>';
         h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
         h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        saveAIHistory('restock','智能补货建议',reply);
         showModal(h,600);
     });
 }
@@ -2459,6 +2580,7 @@ function aiPurchaseAdvice(){
         var h='<h3>采购优化建议</h3>';
         h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
         h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        saveAIHistory('purchase','采购优化建议',reply);
         showModal(h,600);
     });
 }
@@ -2488,6 +2610,7 @@ function doAiMonthlyReport(){
         el.innerHTML='<div style="margin-top:10px;padding:14px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>'
             +'<div class="brow" style="margin-top:10px"><button class="btn p" onclick="exportReportPDF()">导出PDF</button> <button class="btn" onclick="closeModal()">关闭</button></div>';
         window._aiReport={title:title,content:reply,ym:ym};
+        saveAIHistory('report','月度经营报告',reply);
     });
 }
 
@@ -2529,6 +2652,7 @@ function aiBusinessAnalysis(){
         var h='<h3>经营分析建议</h3>';
         h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
         h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        saveAIHistory('analysis','经营分析建议',reply);
         showModal(h,600);
     });
 }
@@ -2558,6 +2682,7 @@ function aiAskQuestion() {
             el.innerHTML = '<div style="padding:10px;color:var(--rd)">回答失败</div>';
             return;
         }
+        saveAIHistory('ask','AI问答',reply);
         el.innerHTML = '<div style="margin-top:10px;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
     });
 }
