@@ -2048,79 +2048,22 @@ function rAI() {
 
     setMain('AI 助手', h);
     function checkMimoAccount() {
-    var ep = localStorage.getItem('ax_mimo_ep');
-    var key = localStorage.getItem('ax_mimo_key');
-    if (!ep || !key) return;
-
-    // MiMo API 地址基础部分（去掉 /chat/completions）
-    var base = ep.replace(/\/chat\/completions\/?$/, '');
-
-    // 尝试获取订阅信息
-    fetch(base + '/subscription', {
-        headers: { 'Authorization': 'Bearer ' + key }
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-        console.log('订阅信息:', data);
-        var el = document.getElementById('aiAccountInfo');
-        if (!el) return;
-        if (data.error) {
-            el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">账户信息查询暂不可用</div>';
-            return;
-        }
-        var h = '';
-        if (data.hard_limit_usd !== undefined) {
-            h += '<div style="font-size:.78rem">额度上限: $' + data.hard_limit_usd + '</div>';
-        }
-        if (data.access_until) {
-            var d = new Date(data.access_until * 1000);
-            h += '<div style="font-size:.78rem">到期时间: ' + d.toLocaleDateString() + '</div>';
-        }
-        if (data.plan) {
-            h += '<div style="font-size:.78rem">套餐: ' + data.plan.title + '</div>';
-        }
-        if (h) el.innerHTML = h;
-        else el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">暂无订阅信息</div>';
-    })
-    .catch(function() {
-        var el = document.getElementById('aiAccountInfo');
-        if (el) el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">账户信息查询暂不可用</div>';
-    });
-
-    // 尝试获取用量信息（按天）
-    var today = new Date();
-    var thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    var start = thirtyDaysAgo.toISOString().split('T')[0];
-    var end = today.toISOString().split('T')[0];
-
-    fetch(base + '/usage?start_date=' + start + '&end_date=' + end, {
-        headers: { 'Authorization': 'Bearer ' + key }
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-        console.log('用量信息:', data);
-        var el = document.getElementById('aiUsageInfo');
-        if (!el) return;
-        if (data.error) {
-            el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">用量查询暂不可用</div>';
-            return;
-        }
-        // OpenAI兼容格式：total_usage 单位是美分
-        if (data.total_usage !== undefined) {
-            var usd = (data.total_usage / 100).toFixed(2);
-            el.innerHTML = '<div style="font-size:.78rem">近30天用量: $' + usd + '</div>';
-        }
-        if (data.daily_costs && data.daily_costs.length) {
-            var total = data.daily_costs.reduce(function(s, d) { return s + (d.results[0].n_requests || 0); }, 0);
-            el.innerHTML += '<div style="font-size:.78rem">近30天请求次数: ' + total + '</div>';
-        }
-    })
-    .catch(function() {
-        var el = document.getElementById('aiUsageInfo');
-        if (el) el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">用量查询暂不可用</div>';
-    });
+    var el = document.getElementById('aiAccountInfo');
+    if (!el) return;
+    var ep = localStorage.getItem('ax_mimo_ep') || '未配置';
+    var model = localStorage.getItem('ax_mimo_model') || '未配置';
+    var hasKey = !!localStorage.getItem('ax_mimo_key');
+    var h = '';
+    h += '<div style="font-size:.78rem">API地址: ' + ep + '</div>';
+    h += '<div style="font-size:.78rem">模型: ' + model + '</div>';
+    h += '<div style="font-size:.78rem">API Key: ' + (hasKey ? '已配置 ✓' : '<span style="color:var(--rd)">未配置 ✗</span>') + '</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m);margin-top:6px">订阅和用量请到小米MiMo官网查看</div>';
+    el.innerHTML = h;
+    var el2 = document.getElementById('aiUsageInfo');
+    if (el2) el2.innerHTML = '';
 }
 }
+
 // ========================================
 // 功能1：智能日报解析
 // 粘贴日报文字 → MiMo解析 → 弹窗确认 → 保存
