@@ -41,6 +41,7 @@ textarea,.inp{background:var(--sf);border:1px solid var(--bd);border-radius:6px;
 .pm-edit{background:var(--sf);border:1px solid var(--bd);border-radius:4px;font-size:.74rem;padding:4px 6px;width:100%;min-width:50px}.pm-edit:focus{border-color:var(--ac);outline:none}
 .tag-btns{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;align-items:center}.tag-btn{padding:3px 10px;border-radius:12px;border:1px solid var(--bd);background:var(--card-h);color:var(--tx-s);font-family:var(--fb);font-size:.72rem;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.tag-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--card)}
 @media(max-width:600px){.cards{grid-template-columns:repeat(2,1fr)}.card-v{font-size:.95rem}.main{padding:16px 14px 40px}.hrow{flex-direction:column;gap:6px}.hrow .inp,.hrow label{width:100%;text-align:left;min-width:auto}.hrow label{padding-right:0}}
+@keyframes aiSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -537,7 +538,7 @@ var DEFAULT_CONFIG = {
     // MiMo API
     mimo_endpoint: 'https://api.mimo.com/v1/chat/completions',  // MiMo API地址，保持默认即可
     mimo_key: '',  // 需要用户填写自己的API Key
-    mimo_model: 'MiMo-V2.5'
+    mimo_model: 'mimo-V2.5'
 };
 
 // 首次加载时，如果 localStorage 里没有配置，自动使用默认值
@@ -571,6 +572,45 @@ function saveMimoCfg() {
 }
 
 // ========================================
+// AI加载动画
+// 显示一个全屏半透明遮罩 + 转圈动画 + 提示文字
+// ========================================
+function showAILoading(){
+    // 如果已经存在就不重复创建
+    if(document.getElementById('aiLoadingOverlay'))return;
+
+    // 创建遮罩元素
+    var el=document.createElement('div');
+    el.id='aiLoadingOverlay';
+    el.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column';
+
+    // 内容区：圆圈 + 文字
+    el.innerHTML='<div style="background:var(--card);border-radius:12px;padding:30px 40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)">'
+        // CSS转圈动画
+        +'<div style="width:40px;height:40px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:aiSpin 0.8s linear infinite;margin:0 auto 14px"></div>'
+        +'<div style="font-size:.88rem;font-weight:600;color:var(--tx)">MiMo 正在分析...</div>'
+        +'<div id="aiLoadingTimer" style="font-size:.72rem;color:var(--tx-m);margin-top:6px">已用时 0秒</div>'
+        +'<div style="font-size:.65rem;color:var(--tx-m);margin-top:8px">请耐心等待，不要关闭页面</div>'
+        +'</div>';
+
+    document.body.appendChild(el);
+
+    // 计时器：显示已经等了多少秒
+    window._aiStartTime=Date.now();
+    window._aiTimerInterval=setInterval(function(){
+        var elapsed=Math.floor((Date.now()-window._aiStartTime)/1000);
+        var el2=document.getElementById('aiLoadingTimer');
+        if(el2)el2.textContent='已用时 '+elapsed+'秒';
+    },1000);
+}
+
+function hideAILoading(){
+    var el=document.getElementById('aiLoadingOverlay');
+    if(el)el.remove();
+    if(window._aiTimerInterval){clearInterval(window._aiTimerInterval);window._aiTimerInterval=null}
+}
+
+// ========================================
 // MiMo 通用对话函数
 // 所有AI功能都调用这个函数
 // 参数：
@@ -578,54 +618,37 @@ function saveMimoCfg() {
 //   callback - 收到回答后的回调函数
 //   opts     - 可选参数 {temperature, max_tokens}
 // ========================================
-function mimoChat(prompt, callback, opts) {
-    var ep = localStorage.getItem('ax_mimo_ep');
-    var key = localStorage.getItem('ax_mimo_key');
-    var model = localStorage.getItem('ax_mimo_model') || 'MiMo-V2.5-Pro';
-
-    if (!ep || !key) {
-        toast('请先在设置页配置MiMo API');
-        callback(null);
-        return;
-    }
-
-    var body = {
-        model: model,
-        messages: [{role: 'user', content: prompt}],
-        max_tokens: (opts && opts.max_tokens) || 4096,
-        temperature: (opts && opts.temperature !== undefined) ? opts.temperature : 0.3
+function mimoChat(prompt,callback,opts){
+    var ep=localStorage.getItem('ax_mimo_ep');
+    var key=localStorage.getItem('ax_mimo_key');
+    var model=localStorage.getItem('ax_mimo_model')||'mimo-v2.5';
+    if(!ep||!key){toast('请先在设置页配置MiMo API');callback(null);return}
+    var body={model:model,messages:[{role:'user',content:prompt}],max_tokens:(opts&&opts.max_tokens)||4096,temperature:(opts&&opts.temperature!==undefined)?opts.temperature:0.3};
+    showAILoading();
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST',ep,true);
+    xhr.setRequestHeader('Content-Type','application/json');
+    xhr.setRequestHeader('Authorization','Bearer '+key);
+    xhr.timeout=120000;
+    xhr.onload=function(){
+        hideAILoading();
+        console.log('MiMo返回:',xhr.status,xhr.responseText.substring(0,300));
+        try{
+            var data=JSON.parse(xhr.responseText);
+            if(data.choices&&data.choices[0]){
+                callback(data.choices[0].message.content||'');
+            }else if(data.error){
+                toast('API错误: '+(data.error.message||JSON.stringify(data.error)));
+                callback(null);
+            }else{callback(null)}
+        }catch(e){toast('返回格式异常');callback(null)}
     };
-
-    fetch(ep, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + key
-        },
-        body: JSON.stringify(body)
-    })
-    .then(function(res) { return res.text(); })
-    .then(function(raw) {
-        try {
-            var data = JSON.parse(raw);
-            if (data.choices && data.choices[0]) {
-                callback(data.choices[0].message.content || '');
-            } else if (data.error) {
-                toast('API错误: ' + (data.error.message || data.error));
-                callback(null);
-            } else {
-                callback(null);
-            }
-        } catch(e) {
-            toast('返回格式异常');
-            callback(null);
-        }
-    })
-    .catch(function(err) {
-        toast('请求失败: ' + err.message);
-        callback(null);
-    });
+    xhr.onerror=function(){hideAILoading();toast('请求失败，请检查网络');callback(null)};
+    xhr.ontimeout=function(){hideAILoading();toast('请求超时');callback(null)};
+    xhr.send(JSON.stringify(body));
 }
+
+
 
 // ========================================
 // 辅助函数：构建本月数据摘要
@@ -1961,7 +1984,7 @@ h += '<div style="background:var(--card);border:1px solid var(--bd);border-radiu
 h += '<p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px">用于采购单拍照识别，接入小米MiMo视觉API</p>';
 h += '<div class="hrow"><label>API地址</label><input class="inp" id="mimoEndpoint" style="flex:2" placeholder="https://api.mimo.com/v1/chat/completions" value="' + (localStorage.getItem('ax_mimo_ep') || '') + '"></div>';
 h += '<div class="hrow"><label>API Key</label><input class="inp" id="mimoKey" style="flex:2" placeholder="sk-xxxx" value="' + (localStorage.getItem('ax_mimo_key') || '') + '"></div>';
-h+='<div class="hrow"><label>模型</label><select class="inp" id="mimoModel" style="max-width:200px">';var mimoModels=['MiMo-V2.5-Pro','MiMo-V2.5','MiMo-V2.5-TTS-VoiceClone','MiMo-V2.5-TTS-VoiceDesign','MiMo-V2.5-TTS','MiMo-V2-Pro','MiMo-V2-Omni','MiMo-V2-TTS'];var curModel=localStorage.getItem('ax_mimo_model')||'MiMo-V2.5-Pro';mimoModels.forEach(function(m){h+='<option'+(curModel===m?' selected':'')+'>'+m+'</option>'});h+='</select></div>';
+h+='<div class="hrow"><label>模型</label><select class="inp" id="mimoModel" style="max-width:200px">';var mimoModels=['mimo-v2.5','mimo-v2.5-pro','mimo-v2.5-tts-voiceclone','mimo-v2.5-tts-voicedesign','mimo-v2.5-tts','mimo-v2-pro','mimo-v2-omni','mimo-v2-tts'];var curModel=localStorage.getItem('ax_mimo_model')||'mimo-V2.5-Pro';mimoModels.forEach(function(m){h+='<option'+(curModel===m?' selected':'')+'>'+m+'</option>'});h+='</select></div>';
 h += '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="saveMimoCfg()">保存配置</button></div>';
 h += '</div>';
 h+='<div class="sec">GitHub 同步</div>';if(!_gh.ready){h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><h4 style="font-size:.84rem;margin-bottom:8px">设置同步</h4><p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--ac)">创建Token</a> → 勾选 gist</p><div class="hrow"><input class="inp" id="ghTK" placeholder="ghp_xxxx..."></div><div class="brow" style="margin-top:8px"><button class="btn p" onclick="ghSetToken(document.getElementById(\'ghTK\').value)">连接</button></div></div>'}else{h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><p style="font-size:.74rem;color:var(--gn)">已连接 · Gist: '+(_gh.gistId||'创建中')+'</p><div class="brow"><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button><button class="btn d s" onclick="ghDisconnect()">断开</button></div></div>'}h+='<div class="sec">数据码</div><div class="brow"><button class="btn" onclick="genSyncCode()">生成</button><button class="btn" onclick="importSyncCode()">导入</button></div>';h+='<div class="sec">设置</div><div class="cards"><div class="card"><div class="card-l">日报</div><div class="card-v">'+DB.dailyReports.length+'</div></div><div class="card"><div class="card-l">采购</div><div class="card-v">'+DB.purchases.length+'</div></div><div class="card"><div class="card-l">费用</div><div class="card-v">'+DB.expenses.length+'</div></div><div class="card"><div class="card-l">仓库</div><div class="card-v">'+(DB.whItems||[]).length+'</div></div></div><div class="brow"><button class="btn" onclick="expJSON()">导出JSON</button><input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)"><button class="btn" onclick="document.getElementById(\'impF\').click()">导入</button></div>';h+='<div class="sec">示例</div><div class="brow"><button class="btn" onclick="loadSample()">加载示例</button></div><div class="sec" style="color:var(--rd)">危险</div><div class="brow"><button class="btn d" onclick="if(confirm(\'清空？\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';setMain('设置',h)}
@@ -1988,7 +2011,9 @@ function rAI() {
     // 第一行：解析类
     h += '<div class="sec">智能解析</div>';
     h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
-
+    h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="doAIParse()">';
+    h+='<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">📋 采购单识别</div>';
+    h+='<div style="font-size:.72rem;color:var(--tx-m)">拍照采购单，AI自动识别商品</div></div>';
     h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiDailyParse()">';
     h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">📝 智能日报解析</div>';
     h += '<div style="font-size:.72rem;color:var(--tx-m)">粘贴日报文字，AI自动识别填入</div></div>';
@@ -2384,37 +2409,17 @@ function saveOcrExpense() {
 // 功能4：异常检测
 // 把本月数据发给MiMo，让它找异常
 // ========================================
-function aiAnomaly() {
-    var ym = curYM();
+function aiAnomaly(){
     toast('AI正在分析...');
-
-    var summary = buildMonthSummary(ym);
-
-    // 加上采购明细
-    var purLines = [];
-    DB.purchases.filter(function(p) { return p.date.startsWith(ym); }).forEach(function(p) {
-        p.items.forEach(function(i) {
-            purLines.push(p.date + ' ' + i.name + ' ' + i.qty + (i.unit||'') + ' 单价' + i.unitPrice + ' 总价' + i.total);
-        });
-    });
-
-    var prompt = '你是一个餐厅财务分析师。请分析以下经营数据，找出异常或值得关注的问题。\n\n'
-        + '分析维度：\n'
-        + '1. 日营收波动（是否有某天特别高或低）\n'
-        + '2. 采购价格波动（同一物品价格是否异常）\n'
-        + '3. 成本率是否正常\n'
-        + '4. 客流与营收是否匹配\n'
-        + '5. 其他你认为需要注意的问题\n\n'
-        + '请用简洁的列表形式返回，每条异常用⚠️标注。没有异常就说"暂无异常"。\n\n'
-        + '经营数据：\n' + summary + '\n\n'
-        + '采购明细：\n' + purLines.join('\n');
-
-    mimoChat(prompt, function(reply) {
-        if (!reply) return;
-        var h = '<h3>异常检测报告</h3>';
-        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
-        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
-        showModal(h, 600);
+    var ym=curYM();
+    var summary=buildMonthSummary(ym);
+    var prompt='你是餐厅财务分析师。请分析以下经营数据，找出异常。\n\n分析维度：\n1. 日营收波动\n2. 采购价格波动\n3. 成本率是否正常\n4. 其他需要注意的问题\n\n用简洁列表返回，异常用⚠️标注。数据：\n'+summary;
+    mimoChat(prompt,function(reply){
+        if(!reply)return;
+        var h='<h3>异常检测报告</h3>';
+        h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
+        h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h,600);
     });
 }
 
@@ -2422,66 +2427,20 @@ function aiAnomaly() {
 // 功能5：智能补货建议
 // 分析库存+历史消耗，预测何时需要补货
 // ========================================
-function aiRestockAlert() {
+function aiRestockAlert(){
     toast('AI正在分析...');
-
-    // 收集库存数据
-    var inventory = [];
-
-    DB.cigItems.forEach(function(item) {
-        var c = invCalc(item, 'cig');
-        inventory.push('香烟 ' + item.name + ' 库存' + c.stock + '包 安全线' + (item.restockAlert||0));
-    });
-
-    DB.alcItems.forEach(function(item) {
-        var c = invCalc(item, 'alc');
-        inventory.push('酒类 ' + item.name + ' 库存' + c.stock + '瓶 安全线' + (item.restockAlert||0));
-    });
-
-    (DB.whItems || []).forEach(function(item) {
-        inventory.push('仓库 ' + item.name + ' 库存' + item.stock + (item.unit||'') + ' 安全线' + (item.safeStock||0));
-    });
-
-    DB.teaItems.forEach(function(item) {
-        var c = invCalc(item, 'tea');
-        var unit = item.calcMode === 'pack' ? '包' : '克';
-        inventory.push('茗茶 ' + item.name + ' 库存' + c.stock + unit + ' 安全线' + (item.restockAlert||0));
-    });
-
-    // 收集近期销售数据
-    var salesLines = [];
-    var ym = curYM();
-    DB.cigItems.forEach(function(item) {
-        var sales = item.sales.filter(function(s) { return s.date.startsWith(ym); });
-        if (sales.length) {
-            var total = sales.reduce(function(s, r) { return s + (r.qty||0); }, 0);
-            salesLines.push('香烟 ' + item.name + ' 本月已售' + total + '包');
-        }
-    });
-
-    DB.alcItems.forEach(function(item) {
-        var sales = item.sales.filter(function(s) { return s.date.startsWith(ym); });
-        if (sales.length) {
-            var total = sales.reduce(function(s, r) { return s + (r.qty||0); }, 0);
-            salesLines.push('酒类 ' + item.name + ' 本月已售' + total + '瓶');
-        }
-    });
-
-    var prompt = '你是一个餐厅库存管理顾问。请根据以下库存和销售数据，给出补货建议。\n\n'
-        + '请对每个物品评估：\n'
-        + '1. 当前库存是否充足\n'
-        + '2. 根据消耗速度，预计多久后用完\n'
-        + '3. 是否需要立即补货\n\n'
-        + '请用简洁列表返回，紧急的用🔴标注，建议的用🟡标注，充足的用🟢标注。\n\n'
-        + '当前库存：\n' + (inventory.length ? inventory.join('\n') : '暂无') + '\n\n'
-        + '本月销售：\n' + (salesLines.length ? salesLines.join('\n') : '暂无');
-
-    mimoChat(prompt, function(reply) {
-        if (!reply) return;
-        var h = '<h3>智能补货建议</h3>';
-        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
-        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
-        showModal(h, 600);
+    var invLines=[];
+    DB.cigItems.forEach(function(item){var c=invCalc(item,'cig');invLines.push('香烟 '+item.name+' 库存'+c.stock+'包 安全线'+(item.restockAlert||0))});
+    DB.alcItems.forEach(function(item){var c=invCalc(item,'alc');invLines.push('酒类 '+item.name+' 库存'+c.stock+'瓶 安全线'+(item.restockAlert||0))});
+    (DB.whItems||[]).forEach(function(item){invLines.push('仓库 '+item.name+' 库存'+item.stock+(item.unit||'')+' 安全线'+(item.safeStock||0))});
+    DB.teaItems.forEach(function(item){var c=invCalc(item,'tea');var u=item.calcMode==='pack'?'包':'克';invLines.push('茗茶 '+item.name+' 库存'+c.stock+u+' 安全线'+(item.restockAlert||0))});
+    var prompt='你是餐厅库存管理顾问。根据以下库存数据给出补货建议。\n\n用简洁列表返回，紧急🔴 建议🟡 充足🟢\n\n库存：\n'+(invLines.length?invLines.join('\n'):'暂无');
+    mimoChat(prompt,function(reply){
+        if(!reply)return;
+        var h='<h3>智能补货建议</h3>';
+        h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
+        h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h,600);
     });
 }
 
@@ -2489,32 +2448,18 @@ function aiRestockAlert() {
 // 功能6：采购建议
 // 分析历史采购模式，优化采购计划
 // ========================================
-function aiPurchaseAdvice() {
+function aiPurchaseAdvice(){
     toast('AI正在分析...');
-
-    var ym = curYM();
-    var purLines = [];
-    DB.purchases.filter(function(p) { return p.date.startsWith(ym); }).forEach(function(p) {
-        p.items.forEach(function(i) {
-            purLines.push(p.date + ' ' + (i.source||p.source||'') + ' ' + i.name + ' ' + i.qty + (i.unit||'') + ' ¥' + i.total);
-        });
-    });
-
-    var prompt = '你是一个餐厅采购顾问。请分析以下采购数据，给出优化建议。\n\n'
-        + '请分析：\n'
-        + '1. 采购频率是否合理\n'
-        + '2. 供应商价格对比（同一物品不同日期的价格变化）\n'
-        + '3. 是否有合并采购节省成本的机会\n'
-        + '4. 哪些物品可以考虑换供应商\n\n'
-        + '请用简洁列表返回。\n\n'
-        + '本月采购明细：\n' + (purLines.length ? purLines.join('\n') : '暂无');
-
-    mimoChat(prompt, function(reply) {
-        if (!reply) return;
-        var h = '<h3>采购优化建议</h3>';
-        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
-        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
-        showModal(h, 600);
+    var ym=curYM();
+    var purLines=[];
+    DB.purchases.filter(function(p){return p.date.startsWith(ym)}).forEach(function(p){p.items.forEach(function(i){purLines.push(p.date+' '+(i.source||p.source||'')+' '+i.name+' '+i.qty+(i.unit||'')+' ¥'+i.total)})});
+    var prompt='你是餐厅采购顾问。分析以下采购数据给出优化建议。\n\n分析：采购频率、价格对比、合并采购机会、供应商建议。\n用简洁列表返回。\n\n本月采购：\n'+(purLines.length?purLines.join('\n'):'暂无');
+    mimoChat(prompt,function(reply){
+        if(!reply)return;
+        var h='<h3>采购优化建议</h3>';
+        h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
+        h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h,600);
     });
 }
 
@@ -2531,36 +2476,21 @@ function aiMonthlyReport() {
     showModal(h, 600);
 }
 
-function doAiMonthlyReport() {
-    var ym = document.getElementById('aiRepM').value || curYM();
+function doAiMonthlyReport(){
+    var ym=document.getElementById('aiRepM').value||curYM();
     toast('AI正在生成报告...');
-
-    var summary = buildMonthSummary(ym);
-    var title = ym.replace('-', '年') + '月经营报告';
-
-    var prompt = '你是一个餐厅财务分析师。请根据以下数据，写一份简洁的月度经营报告。\n\n'
-        + '报告需要包含：\n'
-        + '1. 总体经营概况（1-2句话总结）\n'
-        + '2. 营收分析（结构、趋势）\n'
-        + '3. 成本分析（采购、费用）\n'
-        + '4. 客流分析\n'
-        + '5. 下月建议（2-3条具体建议）\n\n'
-        + '请用清晰的段落格式，使用数字和百分比。语言要专业但易懂。\n\n'
-        + '经营数据：\n' + summary;
-
-    mimoChat(prompt, function(reply) {
-        if (!reply) return;
-
-        var el = document.getElementById('aiRepResult');
-        el.innerHTML = '<div style="margin-top:10px;padding:14px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'
-            + reply
-            + '</div>'
-            + '<div class="brow" style="margin-top:10px"><button class="btn p" onclick="exportReportPDF()">导出PDF</button></div>';
-
-        // 保存报告内容供导出用
-        window._aiReport = { title: title, content: reply, ym: ym };
+    var summary=buildMonthSummary(ym);
+    var title=ym.replace('-','年')+'月经营报告';
+    var prompt='你是一个餐厅财务分析师。请根据以下数据，写一份简洁的月度经营报告。\n\n报告需要包含：\n1. 总体经营概况（1-2句话总结）\n2. 营收分析（结构、趋势）\n3. 成本分析（采购、费用）\n4. 客流分析\n5. 下月建议（2-3条具体建议）\n\n请用清晰的段落格式，使用数字和百分比。语言要专业但易懂。\n\n经营数据：\n'+summary;
+    mimoChat(prompt,function(reply){
+        if(!reply)return;
+        var el=document.getElementById('aiRepResult');
+        el.innerHTML='<div style="margin-top:10px;padding:14px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>'
+            +'<div class="brow" style="margin-top:10px"><button class="btn p" onclick="exportReportPDF()">导出PDF</button> <button class="btn" onclick="closeModal()">关闭</button></div>';
+        window._aiReport={title:title,content:reply,ym:ym};
     });
 }
+
 
 function exportReportPDF() {
     var r = window._aiReport;
@@ -2589,29 +2519,20 @@ function exportReportPDF() {
 // 功能8：经营分析建议
 // AI分析趋势，给出战略建议
 // ========================================
-function aiBusinessAnalysis() {
+function aiBusinessAnalysis(){
     toast('AI正在分析...');
-
-    var ym = curYM();
-    var summary = buildMonthSummary(ym);
-
-    var prompt = '你是一个资深餐饮顾问。请根据以下经营数据，给出深度经营分析和战略建议。\n\n'
-        + '请从以下角度分析：\n'
-        + '1. 收入结构是否健康（厨房/吧台/外卖比例）\n'
-        + '2. 盈利能力评估（毛利率、净利率）\n'
-        + '3. 运营效率（人均消费、翻台率趋势）\n'
-        + '4. 具体可执行的改进措施（至少3条）\n\n'
-        + '请给出专业、具体、可执行的建议，不要空话。\n\n'
-        + '经营数据：\n' + summary;
-
-    mimoChat(prompt, function(reply) {
-        if (!reply) return;
-        var h = '<h3>经营分析建议</h3>';
-        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
-        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
-        showModal(h, 600);
+    var ym=curYM();
+    var summary=buildMonthSummary(ym);
+    var prompt='你是资深餐饮顾问。根据以下经营数据分析并给出建议。\n\n请分析：\n1. 收入结构是否健康\n2. 盈利能力\n3. 运营效率\n4. 至少3条具体可执行的改进措施\n\n数据：\n'+summary;
+    mimoChat(prompt,function(reply){
+        if(!reply)return;
+        var h='<h3>经营分析建议</h3>';
+        h+='<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'+reply+'</div>';
+        h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h,600);
     });
 }
+
 
 // ========================================
 // 功能9：自然语言查询
@@ -2644,7 +2565,7 @@ function aiAskQuestion() {
 // ===== INIT =====
 var _savedFS=localStorage.getItem('ax_fs');if(_savedFS)document.documentElement.style.fontSize=_savedFS+'px';
 var _savedFontSetup=localStorage.getItem('ax_font_heading')||localStorage.getItem('ax_font_body')||localStorage.getItem('ax_font_number');if(_savedFontSetup)applyFonts();
-ghInit();renderNav();migrateAreaCats();initConfig();goPage('dash');if(_gh.ready)ghSyncOnStart();
+ghInit();renderNav();migrateAreaCats();initConfig();goPage('ai');if(_gh.ready)ghSyncOnStart();
 function renderDHist(){var el=document.getElementById('dhArea');if(!el)return;var ym=document.getElementById('dhM')?document.getElementById('dhM').value:curYM();if(!ym)ym=curYM();var reports={};DB.dailyReports.forEach(function(r){if(r.date.startsWith(ym)){reports[parseInt(r.date.split('-')[2])]=r}});var daysInMonth=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1]),0).getDate();var firstDay=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1])-1,1).getDay();firstDay=firstDay===0?6:firstDay-1;var h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';['一','二','三','四','五','六','日'].forEach(function(w){h+='<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">'+w+'</div>'});for(var i=0;i<firstDay;i++)h+='<div></div>';for(var d=1;d<=daysInMonth;d++){var r=reports[d];var isToday=parseInt(td().split('-')[2])===d&&td().startsWith(ym);var has=!!r;h+='<div style="background:'+(has?'var(--card)':'var(--card-h)')+';border:1px solid '+(isToday?'var(--ac)':'var(--bd)')+';border-radius:6px;padding:6px;cursor:'+(has?'pointer':'default')+';min-height:65px"';if(has)h+=' onclick="showDailyModal(\''+r.date+'\')"';h+='><div style="font-size:.72rem;font-weight:600;color:'+(isToday?'var(--ac)':'var(--tx)')+'">'+d+'</div>';if(has)h+='<div style="font-family:var(--fm);font-size:.7rem;color:var(--ac);margin-top:2px">'+fmtC(r.revenue.netSales)+'</div><div style="font-size:.6rem;color:var(--tx-m)">'+r.guest.count+'人</div>';else h+='<div style="font-size:.6rem;color:var(--tx-m);margin-top:4px">-</div>';h+='</div>'}h+='</div>';var mr=getMR(ym);if(mr.length){var mNet=mr.reduce(function(s,r){return s+(r.revenue.netSales||0)},0),mGuests=mr.reduce(function(s,r){return s+(r.guest.count||0)},0);h+='<div class="cards"><div class="card"><div class="card-l">本月实收</div><div class="card-v ac">'+fmtC(mNet)+'</div></div><div class="card"><div class="card-l">已报天数</div><div class="card-v">'+mr.length+'</div></div><div class="card"><div class="card-l">总客流</div><div class="card-v">'+mGuests+'</div></div></div>'}el.innerHTML=h}
 </script>
 <script>
