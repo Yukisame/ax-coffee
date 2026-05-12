@@ -2047,7 +2047,8 @@ function rAI() {
     h += '</div>';
 
     setMain('AI 助手', h);
-    function checkMimoAccount() {
+}
+function checkMimoAccount() {
     var el = document.getElementById('aiAccountInfo');
     if (!el) return;
     var ep = localStorage.getItem('ax_mimo_ep') || '未配置';
@@ -2061,7 +2062,6 @@ function rAI() {
     el.innerHTML = h;
     var el2 = document.getElementById('aiUsageInfo');
     if (el2) el2.innerHTML = '';
-}
 }
 // ========================================
 // 功能1：智能日报解析
