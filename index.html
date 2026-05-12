@@ -158,9 +158,10 @@ function toast(m){var t=$id('toast');t.textContent=m;t.classList.add('show');set
 function showModal(html, width) {
     var el = document.getElementById('modal');
     var w = width || 420;
-    el.innerHTML = '<div class="modal-content" style="width:' + w + 'px;max-width:90vw">' + html + '</div>';
+    el.innerHTML = '<div class="modal-content" style="max-width:' + w + 'px;width:92vw">' + html + '</div>';
     el.style.display = 'flex';
 }
+
 function closeModal() {
     document.getElementById('modal').style.display = 'none';
 }
