@@ -1973,8 +1973,6 @@ function loadSample(){var d=initDB();for(var i=0;i<7;i++){var dd=new Date();dd.s
 // 9个AI功能的入口
 // ========================================
 function rAI() {
-    // 查询MiMo账户信息
-    checkMimoAccount();
     var h = '';
 
     h += '<div style="margin-bottom:14px;padding:12px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r)">';
@@ -2047,6 +2045,8 @@ function rAI() {
     h += '</div>';
 
     setMain('AI 助手', h);
+    setTimeout(checkMimoAccount, 100);
+
 }
 function checkMimoAccount() {
     var el = document.getElementById('aiAccountInfo');
@@ -2058,7 +2058,7 @@ function checkMimoAccount() {
     h += '<div style="font-size:.78rem">API地址: ' + ep + '</div>';
     h += '<div style="font-size:.78rem">模型: ' + model + '</div>';
     h += '<div style="font-size:.78rem">API Key: ' + (hasKey ? '已配置 ✓' : '<span style="color:var(--rd)">未配置 ✗</span>') + '</div>';
-    h += '<div style="font-size:.72rem;color:var(--tx-m);margin-top:6px">订阅和用量请到小米MiMo官网查看</div>';
+    h+='<div style="font-size:.72rem;color:var(--tx-m);margin-top:6px">订阅和用量请到 <a href="https://platform.xiaomimimo.com/console/plan-manage" target="_blank" style="color:var(--ac)">小米MiMo官网</a> 查看</div>';
     el.innerHTML = h;
     var el2 = document.getElementById('aiUsageInfo');
     if (el2) el2.innerHTML = '';
