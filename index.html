@@ -6,7 +6,7 @@
 <title>岸香咖啡 · 经营管理</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500&family=DM+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;600;700&family=Playfair+Display:wght@400;700&family=DM+Serif+Display&family=Syne:wght@400;600;700&family=LXGW+WenKai:wght@400;700&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:wght@300;600&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&family=DM+Serif+Display&family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500&family=Lora:wght@400;600&family=LXGW+WenKai:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Source+Serif+4:wght@400;600&family=Syne:wght@400;700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#f7f4ee;--sf:#fff;--card:#fff;--card-h:#faf8f3;--bd:#e5dfd4;--bd-l:#ece8df;--ac:#b08d57;--ac-h:#c9a86c;--tx:#2c2c2c;--tx-s:#666;--tx-m:#aaa;--gn:#3d8b5e;--gn-b:rgba(61,139,94,.06);--rd:#c75450;--rd-b:rgba(199,84,80,.06);--og:#d4a017;--og-b:rgba(212,160,23,.07);--r:8px;--sh:0 1px 4px rgba(0,0,0,.04);--sh2:0 4px 16px rgba(0,0,0,.06);--fd:'Playfair Display',serif;--fb:'Noto Serif SC',Georgia,serif;--fm:'Lexend','DM Mono',monospace}
@@ -2233,8 +2233,256 @@ function doGen(period){var m=document.getElementById('genM').value||curYM(),sd=1
 // ===== SETTINGS =====
 function setFontSize(v){document.documentElement.style.fontSize=v+'px';localStorage.setItem('ax_fs',v);toast('已调整')}
 function setFontSetting(type,val){localStorage.setItem('ax_font_'+type,val);applyFonts();toast('已切换')}
-function applyFonts(){var hm={'serif-sc':'"Noto Serif SC",serif','sans-sc':'"Noto Sans SC",sans-serif','playfair':'"Playfair Display",serif','dm-serif':'"DM Serif Display",serif','syne':'"Syne",sans-serif'};var bm={'sans-sc':'"Noto Sans SC",sans-serif','wenkai':'"LXGW WenKai",serif','source-serif':'"Source Serif 4",serif'};var nm={'dm-mono':'"DM Mono",monospace','lexend':'"Lexend",monospace','sans-sc':'"Noto Sans SC",sans-serif','courier':'"Courier New",monospace'};var h=localStorage.getItem('ax_font_heading')||'',b=localStorage.getItem('ax_font_body')||'',n=localStorage.getItem('ax_font_number')||'';document.documentElement.style.setProperty('--fd',hm[h]||"'Playfair Display',serif");document.documentElement.style.setProperty('--fb',bm[b]||"'Noto Serif SC',Georgia,serif");document.documentElement.style.setProperty('--fm',nm[n]||"'Lexend','DM Mono',monospace")}
-function rData(){var curH=localStorage.getItem('ax_font_heading')||'',curB=localStorage.getItem('ax_font_body')||'',curN=localStorage.getItem('ax_font_number')||'',curFS=localStorage.getItem('ax_fs')||'13.5';var h='<div class="sec">显示设置</div><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';h+='<div class="hrow" style="margin-bottom:10px"><label>字体大小</label><select class="inp" style="max-width:120px" onchange="setFontSize(this.value)"><option value="12"'+(curFS==='12'?' selected':'')+'>小 12px</option><option value="13.5"'+(curFS==='13.5'?' selected':'')+'>中 13.5px</option><option value="15"'+(curFS==='15'?' selected':'')+'>大 15px</option><option value="17"'+(curFS==='17'?' selected':'')+'>特大 17px</option></select></div>';h+='<div class="hrow" style="margin-bottom:10px"><label>标题字体</label><select class="inp" style="max-width:150px" onchange="setFontSetting(\'heading\',this.value)"><option value=""'+(!curH?' selected':'')+'>Playfair Display</option><option value="serif-sc"'+(curH==='serif-sc'?' selected':'')+'>宋体衬线</option><option value="sans-sc"'+(curH==='sans-sc'?' selected':'')+'>黑体</option><option value="dm-serif"'+(curH==='dm-serif'?' selected':'')+'>DM Serif</option><option value="syne"'+(curH==='syne'?' selected':'')+'>Syne</option></select></div>';h+='<div class="hrow" style="margin-bottom:10px"><label>正文字体</label><select class="inp" style="max-width:150px" onchange="setFontSetting(\'body\',this.value)"><option value=""'+(!curB?' selected':'')+'>默认宋体</option><option value="sans-sc"'+(curB==='sans-sc'?' selected':'')+'>黑体</option><option value="wenkai"'+(curB==='wenkai'?' selected':'')+'>霞鹜文楷</option><option value="source-serif"'+(curB==='source-serif'?' selected':'')+'>Source Serif</option></select></div>';h+='<div class="hrow"><label>数字字体</label><select class="inp" style="max-width:150px" onchange="setFontSetting(\'number\',this.value)"><option value=""'+(!curN?' selected':'')+'>默认等宽</option><option value="dm-mono"'+(curN==='dm-mono'?' selected':'')+'>DM Mono</option><option value="lexend"'+(curN==='lexend'?' selected':'')+'>Lexend</option><option value="sans-sc"'+(curN==='sans-sc'?' selected':'')+'>黑体数字</option><option value="courier"'+(curN==='courier'?' selected':'')+'>Courier</option></select></div>';h+='</div>';h+='<div class="sec">百度OCR配置</div><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';h+='<div class="hrow"><label>API Key</label><input class="inp" id="baiduAK" style="flex:1" value="'+_baiduAK+'"></div>';h+='<div class="hrow"><label>Secret Key</label><input class="inp" id="baiduSK" style="flex:1" value="'+_baiduSK+'"></div>';h+='<div class="brow" style="margin-top:8px"><button class="btn p" onclick="saveBaiduKeys()">保存</button></div></div>';h += '<div class="sec">MiMo AI 图片识别</div>';
+
+// ========================================
+// 主题配色方案
+// ========================================
+function setTheme(name){
+    localStorage.setItem('ax_theme',name);
+    applyTheme();
+    toast('已切换主题');
+}
+
+function applyTheme(){
+    var name=localStorage.getItem('ax_theme')||'默认深色';
+    var root=document.documentElement;
+
+    var themes={
+        '默认深色':{
+            bg:'#0f1114',surface:'#1a1d23',surfaceH:'#22262e',
+            bd:'#2a2e36',bdL:'#333840',
+            ac:'#d4a853',tx:'#e8e4dc',txM:'#7a766e',txS:'#5a5850',
+            gn:'#4caf7d',rd:'#e05555',og:'#e8a035',
+            sh:'0 2px 8px rgba(0,0,0,0.3)'
+        },
+        '经典棕色':{
+            bg:'#1c1814',surface:'#282320',surfaceH:'#322c28',
+            bd:'#3d3632',bdL:'#4a423c',
+            ac:'#c8956c',tx:'#e8ddd4',txM:'#8a7e74',txS:'#6a6058',
+            gn:'#6aad6a',rd:'#c85555',og:'#c8956c',
+            sh:'0 2px 8px rgba(0,0,0,0.3)'
+        },
+        '极简白':{
+            bg:'#ffffff',surface:'#f8f8f8',surfaceH:'#f0f0f0',
+            bd:'#e0e0e0',bdL:'#d0d0d0',
+            ac:'#333333',tx:'#222222',txM:'#888888',txS:'#aaaaaa',
+            gn:'#2e8b57',rd:'#cc3333',og:'#cc8800',
+            sh:'0 2px 8px rgba(0,0,0,0.08)'
+        },
+        '森林绿':{
+            bg:'#0d1410',surface:'#162018',surfaceH:'#1e2a22',
+            bd:'#283830',bdL:'#324238',
+            ac:'#5aad6a',tx:'#d8e8dc',txM:'#6a8a70',txS:'#4a6a50',
+            gn:'#5aad6a',rd:'#c85555',og:'#b8a040',
+            sh:'0 2px 8px rgba(0,0,0,0.3)'
+        },
+        '星空蓝':{
+            bg:'#0d1117',surface:'#161b22',surfaceH:'#1c2333',
+            bd:'#2a3040',bdL:'#343e50',
+            ac:'#58a6ff',tx:'#d8dee8',txM:'#6a7a8e',txS:'#4a5a6e',
+            gn:'#3fb950',rd:'#f85149',og:'#d29922',
+            sh:'0 2px 8px rgba(0,0,0,0.3)'
+        },
+        '玫瑰粉':{
+            bg:'#181014',surface:'#221820',surfaceH:'#2c2028',
+            bd:'#3a2834',bdL:'#483040',
+            ac:'#d4739a',tx:'#e8d8e0',txM:'#8a6a78',txS:'#6a4a58',
+            gn:'#6aad6a',rd:'#d45050',og:'#d49050',
+            sh:'0 2px 8px rgba(0,0,0,0.3)'
+        }
+    };
+
+    var t=themes[name]||themes['默认深色'];
+    root.style.setProperty('--bg',t.bg);
+    root.style.setProperty('--card',t.surface);
+    root.style.setProperty('--card-h',t.surfaceH);
+    root.style.setProperty('--bd',t.bd);
+    root.style.setProperty('--bd-l',t.bdL);
+    root.style.setProperty('--ac',t.ac);
+    root.style.setProperty('--tx',t.tx);
+    root.style.setProperty('--tx-m',t.txM);
+    root.style.setProperty('--tx-s',t.txS);
+    root.style.setProperty('--gn',t.gn);
+    root.style.setProperty('--rd',t.rd);
+    root.style.setProperty('--og',t.og);
+    root.style.setProperty('--sh',t.sh);
+}
+
+// ========================================
+// 字体设置
+// ========================================
+function setFontSize(v){
+    document.documentElement.style.fontSize=v+'px';
+    localStorage.setItem('ax_fs',v);
+    toast('已调整');
+}
+
+function setFontSetting(type,val){
+    localStorage.setItem('ax_font_'+type,val);
+    applyFonts();
+    toast('已切换');
+}
+
+function applyFonts(){
+    var headingMap={
+        '':'"Playfair Display",serif',
+        'noto-serif':'"Noto Serif SC",serif',
+        'noto-sans':'"Noto Sans SC",sans-serif',
+        'dm-serif':'"DM Serif Display",serif',
+        'syne':'"Syne",sans-serif',
+        'bebas':'"Bebas Neue",sans-serif',
+        'instrument':'"Instrument Serif",serif',
+        'playfair':'"Playfair Display",serif',
+        'cormorant':'"Cormorant Garamond",serif',
+        'lxgw-serif':'"LXGW WenKai",serif'
+    };
+    var bodyMap={
+        '':'"Noto Serif SC",Georgia,serif',
+        'noto-sans':'"Noto Sans SC",sans-serif',
+        'lxgw-wenkai':'"LXGW WenKai",serif',
+        'source-serif':'"Source Serif 4",serif',
+        'crimson':'"Crimson Pro",serif',
+        'lora':'"Lora",serif',
+        'dm-sans':'"DM Sans",sans-serif'
+    };
+    var numberMap={
+        '':'"DM Mono","Lexend",monospace',
+        'dm-mono':'"DM Mono",monospace',
+        'lexend':'"Lexend",monospace',
+        'noto-sans':'"Noto Sans SC",sans-serif',
+        'courier':'"Courier New",monospace',
+        'jetbrains':'"JetBrains Mono",monospace',
+        'fira':'"Fira Code",monospace',
+        'ibm-plex':'"IBM Plex Mono",monospace'
+    };
+
+    var h=localStorage.getItem('ax_font_heading')||'';
+    var b=localStorage.getItem('ax_font_body')||'';
+    var n=localStorage.getItem('ax_font_number')||'';
+
+    document.documentElement.style.setProperty('--fd',headingMap[h]||headingMap['']);
+    document.documentElement.style.setProperty('--fb',bodyMap[b]||bodyMap['']);
+    document.documentElement.style.setProperty('--fm',numberMap[n]||numberMap['']);
+}
+
+// ========================================
+// 圆角和间距
+// ========================================
+function setRadius(v){
+    localStorage.setItem('ax_radius',v);
+    document.documentElement.style.setProperty('--r',v+'px');
+    toast('已调整');
+}
+
+function setSpacing(v){
+    localStorage.setItem('ax_spacing',v);
+    applySpacing();
+    toast('已调整');
+}
+
+function applySpacing(){
+    var v=localStorage.getItem('ax_spacing')||'normal';
+    var root=document.documentElement;
+    if(v==='compact'){
+        root.style.setProperty('--sp','8px');
+        root.style.setProperty('--sp-l','10px');
+    }else if(v==='loose'){
+        root.style.setProperty('--sp','18px');
+        root.style.setProperty('--sp-l','24px');
+    }else{
+        root.style.setProperty('--sp','12px');
+        root.style.setProperty('--sp-l','16px');
+    }
+}
+function rData(){var curH=localStorage.getItem('ax_font_heading')||'',curB=localStorage.getItem('ax_font_body')||'',curN=localStorage.getItem('ax_font_number')||'',curFS=localStorage.getItem('ax_fs')||'13.5';var h='<div class="sec">显示设置</div>';
+h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
+
+// 主题选择
+h+='<div class="hrow" style="margin-bottom:10px"><label>主题风格</label>';
+h+='<select class="inp" style="max-width:150px" onchange="setTheme(this.value)">';
+var themes=['默认深色','经典棕色','极简白','森林绿','星空蓝','玫瑰粉'];
+var curTheme=localStorage.getItem('ax_theme')||'默认深色';
+themes.forEach(function(t){h+='<option'+(curTheme===t?' selected':'')+'>'+t+'</option>'});
+h+='</select></div>';
+
+// 字体大小
+h+='<div class="hrow" style="margin-bottom:10px"><label>字体大小</label>';
+h+='<select class="inp" style="max-width:120px" onchange="setFontSize(this.value)">';
+var sizes=[{v:'12',l:'小 12px'},{v:'13',l:'标准 13px'},{v:'14',l:'中 14px'},{v:'15',l:'大 15px'},{v:'17',l:'特大 17px'},{v:'19',l:'超大 19px'}];
+var curFS=localStorage.getItem('ax_fs')||'13';
+sizes.forEach(function(s){h+='<option value="'+s.v+'"'+(curFS===s.v?' selected':'')+'>'+s.l+'</option>'});
+h+='</select></div>';
+
+// 标题字体
+h+='<div class="hrow" style="margin-bottom:10px"><label>标题字体</label>';
+h+='<select class="inp" style="max-width:160px" onchange="setFontSetting(\'heading\',this.value)">';
+var headingFonts=[
+    {v:'',l:'默认 Playfair Display'},
+    {v:'noto-serif',l:'思源宋体'},
+    {v:'noto-sans',l:'思源黑体'},
+    {v:'dm-serif',l:'DM Serif'},
+    {v:'syne',l:'Syne'},
+    {v:'bebas',l:'Bebas Neue'},
+    {v:'instrument',l:'Instrument Serif'},
+    {v:'playfair',l:'Playfair Display'},
+    {v:'cormorant',l:'Cormorant Garamond'},
+    {v:'lxgw-serif',l:'霞鹜文楷'}
+];
+var curH=localStorage.getItem('ax_font_heading')||'';
+headingFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curH===f.v?' selected':'')+'>'+f.l+'</option>'});
+h+='</select></div>';
+
+// 正文字体
+h+='<div class="hrow" style="margin-bottom:10px"><label>正文字体</label>';
+h+='<select class="inp" style="max-width:160px" onchange="setFontSetting(\'body\',this.value)">';
+var bodyFonts=[
+    {v:'',l:'默认思源宋体'},
+    {v:'noto-sans',l:'思源黑体'},
+    {v:'lxgw-wenkai',l:'霞鹜文楷'},
+    {v:'source-serif',l:'Source Serif'},
+    {v:'crimson',l:'Crimson Pro'},
+    {v:'lora',l:'Lora'},
+    {v:'dm-sans',l:'DM Sans'}
+];
+var curB=localStorage.getItem('ax_font_body')||'';
+bodyFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curB===f.v?' selected':'')+'>'+f.l+'</option>'});
+h+='</select></div>';
+
+// 数字字体
+h+='<div class="hrow" style="margin-bottom:10px"><label>数字字体</label>';
+h+='<select class="inp" style="max-width:160px" onchange="setFontSetting(\'number\',this.value)">';
+var numberFonts=[
+    {v:'',l:'默认等宽'},
+    {v:'dm-mono',l:'DM Mono'},
+    {v:'lexend',l:'Lexend'},
+    {v:'noto-sans',l:'黑体数字'},
+    {v:'courier',l:'Courier New'},
+    {v:'jetbrains',l:'JetBrains Mono'},
+    {v:'fira',l:'Fira Code'},
+    {v:'ibm-plex',l:'IBM Plex Mono'}
+];
+var curN=localStorage.getItem('ax_font_number')||'';
+numberFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curN===f.v?' selected':'')+'>'+f.l+'</option>'});
+h+='</select></div>';
+
+// 圆角大小
+h+='<div class="hrow" style="margin-bottom:10px"><label>圆角大小</label>';
+h+='<select class="inp" style="max-width:120px" onchange="setRadius(this.value)">';
+var radiuses=[{v:'6',l:'小 6px'},{v:'10',l:'中 10px'},{v:'14',l:'大 14px'},{v:'20',l:'圆润 20px'}];
+var curR=localStorage.getItem('ax_radius')||'10';
+radiuses.forEach(function(r){h+='<option value="'+r.v+'"'+(curR===r.v?' selected':'')+'>'+r.l+'</option>'});
+h+='</select></div>';
+
+// 页面间距
+h+='<div class="hrow"><label>页面间距</label>';
+h+='<select class="inp" style="max-width:120px" onchange="setSpacing(this.value)">';
+var spacings=[{v:'compact',l:'紧凑'},{v:'normal',l:'标准'},{v:'loose',l:'宽松'}];
+var curS=localStorage.getItem('ax_spacing')||'normal';
+spacings.forEach(function(s){h+='<option value="'+s.v+'"'+(curS===s.v?' selected':'')+'>'+s.l+'</option>'});
+h+='</select></div>';
+
+h+='</div>';
+
 h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 h += '<p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px">用于采购单拍照识别，接入小米MiMo视觉API</p>';
 h += '<div class="hrow"><label>API地址</label><input class="inp" id="mimoEndpoint" style="flex:2" placeholder="https://api.mimo.com/v1/chat/completions" value="' + (localStorage.getItem('ax_mimo_ep') || '') + '"></div>';
@@ -2832,6 +3080,11 @@ setTimeout(function() {
     if (!items.length) return;
     var aiItem = items[items.length-1].cloneNode(true);
     aiItem.setAttribute('data-page', 'ai');
+    applyTheme();
+    applyFonts();
+    var savedFS=localStorage.getItem('ax_fs');if(savedFS)document.documentElement.style.fontSize=savedFS+'px';
+    var savedR=localStorage.getItem('ax_radius');if(savedR)document.documentElement.style.setProperty('--r',savedR+'px');
+    applySpacing();
     aiItem.setAttribute('onclick', "goPage('ai')");
     var spans = aiItem.querySelectorAll('span');
     if (spans.length >= 2) {
