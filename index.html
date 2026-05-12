@@ -88,7 +88,7 @@ function doImportCode(c){if(!c)return;try{var d=JSON.parse(decodeURIComponent(es
 
 // ===== DATABASE =====
 var STORE='ax_cafe_v8';
-var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{sep:true},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'备份',icon:'⚙️'}];
+var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{sep:true},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'设置',icon:'⚙️'},{label:'AI',p:'ai',icon:'🤖'}];
 function initDB(){return{dailyReports:[],purchases:[],expenses:[],teaItems:[],cigItems:[],alcItems:[],areaCats: {},whItems:[],damageRecords:[]}}
 
 // ========================================
@@ -570,6 +570,118 @@ function saveMimoCfg() {
     toast('已保存MiMo配置');
 }
 
+// ========================================
+// MiMo 通用对话函数
+// 所有AI功能都调用这个函数
+// 参数：
+//   prompt   - 发给AI的提示词
+//   callback - 收到回答后的回调函数
+//   opts     - 可选参数 {temperature, max_tokens}
+// ========================================
+function mimoChat(prompt, callback, opts) {
+    var ep = localStorage.getItem('ax_mimo_ep');
+    var key = localStorage.getItem('ax_mimo_key');
+    var model = localStorage.getItem('ax_mimo_model') || 'MiMo-V2.5-Pro';
+
+    if (!ep || !key) {
+        toast('请先在设置页配置MiMo API');
+        callback(null);
+        return;
+    }
+
+    var body = {
+        model: model,
+        messages: [{role: 'user', content: prompt}],
+        max_tokens: (opts && opts.max_tokens) || 4096,
+        temperature: (opts && opts.temperature !== undefined) ? opts.temperature : 0.3
+    };
+
+    fetch(ep, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + key
+        },
+        body: JSON.stringify(body)
+    })
+    .then(function(res) { return res.text(); })
+    .then(function(raw) {
+        try {
+            var data = JSON.parse(raw);
+            if (data.choices && data.choices[0]) {
+                callback(data.choices[0].message.content || '');
+            } else if (data.error) {
+                toast('API错误: ' + (data.error.message || data.error));
+                callback(null);
+            } else {
+                callback(null);
+            }
+        } catch(e) {
+            toast('返回格式异常');
+            callback(null);
+        }
+    })
+    .catch(function(err) {
+        toast('请求失败: ' + err.message);
+        callback(null);
+    });
+}
+
+// ========================================
+// 辅助函数：构建本月数据摘要
+// 把数据库中的关键数字提取出来，发给MiMo分析
+// ========================================
+function buildMonthSummary(ym) {
+    var mr = getMR(ym);
+    var mNet = mr.reduce(function(s, r) { return s + (r.revenue.netSales || 0); }, 0);
+    var mKit = mr.reduce(function(s, r) { return s + (r.revenue.kitchenSales || 0); }, 0);
+    var mBar = mr.reduce(function(s, r) { return s + (r.revenue.barSales || 0); }, 0);
+    var mDel = mr.reduce(function(s, r) { return s + (r.delivery.total || 0); }, 0);
+    var mGuests = mr.reduce(function(s, r) { return s + (r.guest.count || 0); }, 0);
+    var days = mr.length;
+
+    var mPur = DB.purchases.filter(function(p) { return p.date.startsWith(ym); })
+        .reduce(function(s, p) { return s + p.items.reduce(function(ss, i) { return ss + i.total; }, 0); }, 0);
+    var mExp = DB.expenses.filter(function(e) { return e.date.startsWith(ym); })
+        .reduce(function(s, e) { return s + e.amount; }, 0);
+
+    var lm = lastYM();
+    var lmr = getMR(lm);
+    var lNet = lmr.reduce(function(s, r) { return s + (r.revenue.netSales || 0); }, 0);
+
+    // 每日明细
+    var dailyLines = [];
+    mr.sort(function(a, b) { return a.date.localeCompare(b.date); });
+    mr.forEach(function(r) {
+        dailyLines.push(
+            r.date + ' 实收' + (r.revenue.netSales || 0) +
+            ' 厨房' + (r.revenue.kitchenSales || 0) +
+            ' 吧台' + (r.revenue.barSales || 0) +
+            ' 客流' + (r.guest.count || 0) + '人'
+        );
+    });
+
+    return [
+        '月份: ' + ym,
+        '经营天数: ' + days + '天',
+        '实收总额: ' + mNet + '元',
+        '厨房销售: ' + mKit + '元',
+        '吧台销售: ' + mBar + '元',
+        '外卖总额: ' + mDel + '元',
+        '上月实收: ' + lNet + '元',
+        '环比变化: ' + (lNet > 0 ? ((mNet - lNet) / lNet * 100).toFixed(1) : 0) + '%',
+        '总客流: ' + mGuests + '人',
+        '人均消费: ' + (mGuests > 0 ? (mNet / mGuests).toFixed(2) : 0) + '元',
+        '采购总额: ' + mPur + '元',
+        '费用总额: ' + mExp + '元',
+        '净利润: ' + (mNet - mPur - mExp) + '元',
+        '成本率: ' + (mNet > 0 ? (mPur / mNet * 100).toFixed(1) : 0) + '%',
+        '',
+        '每日明细:',
+        dailyLines.join('\n')
+    ].join('\n');
+}
+
 // ===== 调用MiMo视觉API识别图片 =====
 // 参数：
 //   base64Img - 图片的base64字符串
@@ -725,7 +837,7 @@ function parseMimoResult(reply) {
         return null;
     }
 }
-function doMimoTextParse(){var ep=localStorage.getItem('ax_mimo_ep');var key=localStorage.getItem('ax_mimo_key');var model=localStorage.getItem('ax_mimo_model')||'MiMo-V2.5-Pro';if(!ep||!key){toast('请先在备份页配置MiMo API');return}var text=$id('ptInput').value.trim();if(!text){toast('请先粘贴文字内容');return}toast('AI正在解析...');var prompt='请解析以下采购单/出库单文字，提取所有商品信息。文字可能有OCR错误，请智能纠正。\n\n请严格按以下JSON格式返回，不要有任何其他文字：\n\n{\n  "date": "YYYY-MM-DD格式的日期，没有就留空字符串",\n  "source": "供应商名称，没有就留空字符串",\n  "items": [\n    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额}\n  ]\n}\n\n以下是要解析的文字：\n---\n'+text+'\n---';var body={model:model,messages:[{role:'user',content:prompt}],max_tokens:4096,temperature:0.1};fetch(ep,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)}).then(function(res){return res.text()}).then(function(raw){console.log('MiMo返回:',raw);try{var data=JSON.parse(raw);var reply='';if(data.choices&&data.choices[0])reply=data.choices[0].message.content||'';if(!reply){toast('AI返回为空');return}var m=reply.match(/\{[\s\S]*\}/);if(!m){toast('AI未返回JSON格式');return}var result=JSON.parse(m[0]);if(!result.items||!result.items.length){toast('未识别到商品');return}if(!result.date)result.date=td();var src=result.source||'';if(/岸香.*贸易|贸易.*岸香/.test(src))src='岸香贸易';else if(!src)src='外购';var items=[];result.items.forEach(function(item){var qty=parseFloat(item.qty)||0,total=parseFloat(item.total)||0,unitPrice=parseFloat(item.unitPrice)||0;if(!unitPrice&&total>0&&qty>0)unitPrice=Math.round(total/qty*100)/100;if(qty>0&&total>0)items.push({name:item.name||'',section:'',category:'',qty:qty,unit:item.unit||'',unitPrice:unitPrice,total:total,source:src})});if(!items.length){toast('解析结果为空');return}window._mimoResult={date:result.date,source:src,items:items};showMimoConfirm()}catch(e){toast('解析失败');console.error(e)}}).catch(function(err){toast('请求失败: '+err.message)})}
+function doMimoTextParse(){var ep=localStorage.getItem('ax_mimo_ep');var key=localStorage.getItem('ax_mimo_key');var model=localStorage.getItem('ax_mimo_model')||'MiMo-V2.5-Pro';if(!ep||!key){toast('请先在设置页配置MiMo API');return}var text=$id('ptInput').value.trim();if(!text){toast('请先粘贴文字内容');return}toast('AI正在解析...');var prompt='请解析以下采购单/出库单文字，提取所有商品信息。文字可能有OCR错误，请智能纠正。\n\n请严格按以下JSON格式返回，不要有任何其他文字：\n\n{\n  "date": "YYYY-MM-DD格式的日期，没有就留空字符串",\n  "source": "供应商名称，没有就留空字符串",\n  "items": [\n    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额}\n  ]\n}\n\n以下是要解析的文字：\n---\n'+text+'\n---';var body={model:model,messages:[{role:'user',content:prompt}],max_tokens:4096,temperature:0.1};fetch(ep,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)}).then(function(res){return res.text()}).then(function(raw){console.log('MiMo返回:',raw);try{var data=JSON.parse(raw);var reply='';if(data.choices&&data.choices[0])reply=data.choices[0].message.content||'';if(!reply){toast('AI返回为空');return}var m=reply.match(/\{[\s\S]*\}/);if(!m){toast('AI未返回JSON格式');return}var result=JSON.parse(m[0]);if(!result.items||!result.items.length){toast('未识别到商品');return}if(!result.date)result.date=td();var src=result.source||'';if(/岸香.*贸易|贸易.*岸香/.test(src))src='岸香贸易';else if(!src)src='外购';var items=[];result.items.forEach(function(item){var qty=parseFloat(item.qty)||0,total=parseFloat(item.total)||0,unitPrice=parseFloat(item.unitPrice)||0;if(!unitPrice&&total>0&&qty>0)unitPrice=Math.round(total/qty*100)/100;if(qty>0&&total>0)items.push({name:item.name||'',section:'',category:'',qty:qty,unit:item.unit||'',unitPrice:unitPrice,total:total,source:src})});if(!items.length){toast('解析结果为空');return}window._mimoResult={date:result.date,source:src,items:items};showMimoConfirm()}catch(e){toast('解析失败');console.error(e)}}).catch(function(err){toast('请求失败: '+err.message)})}
 
 function showMimoConfirm(){var result=window._mimoResult;if(!result)return;var srcTotal=result.items.reduce(function(s,i){return s+i.total},0);var secs=['厨房','吧台','外场'];var cats=getPurCats();var h='';h+='<h3>AI识别结果</h3>';h+='<div class="cards">';h+='<div class="card"><div class="card-l">日期</div><div class="card-v">'+result.date+'</div></div>';h+='<div class="card"><div class="card-l">物品</div><div class="card-v ac">'+result.items.length+'项</div></div>';h+='<div class="card"><div class="card-l">合计</div><div class="card-v ac">'+fmtC(srcTotal)+'</div></div>';h+='<div class="card"><div class="card-l">来源</div><div class="card-v">'+result.source+'</div></div>';h+='</div>';h+='<div class="hrow"><label>来源</label><select class="inp" id="pResSrc" style="max-width:120px">';h+='<option'+(result.source==='岸香贸易'?' selected':'')+'>岸香贸易</option>';h+='<option'+(result.source==='外购'?' selected':'')+'>外购</option></select></div>';h+='<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';h+='<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';h+='<div class="hrow"><label>区域</label><select class="inp" id="mimoBatchSec" style="max-width:110px" onchange="toggleCustomInput(this,'+"'mimoBatchSecC'"+')"><option value="">不填充</option>';secs.forEach(function(s){h+='<option>'+s+'</option>'});h+='<option value="__custom">自定义</option></select><input class="inp" id="mimoBatchSecC" style="display:none;max-width:110px" placeholder="输入区域"><button class="btn s" onclick="mimoBatchFill('+"'section'"+')">应用</button></div>';h+='<div class="hrow"><label>分类</label><select class="inp" id="mimoBatchCat" style="max-width:130px" onchange="toggleCustomInput(this,'+"'mimoBatchCatC'"+')"><option value="">不填充</option>';cats.forEach(function(c){h+='<option>'+c+'</option>'});h+='<option value="__custom">自定义</option></select><input class="inp" id="mimoBatchCatC" style="display:none;max-width:130px" placeholder="输入分类"><button class="btn s" onclick="mimoBatchFill('+"'category'"+')">应用</button></div></div>';h+='<div class="sec">物品列表</div><div id="parseTableWrap"><div class="tw"><table id="parseTbl">';h+='<tr><th>品名</th><th>数量</th><th>单价</th><th>总价</th><th>区域</th><th>分类</th></tr>';result.items.forEach(function(item,idx){h+='<tr><td>'+item.name+'</td><td class="nr">'+item.qty+(item.unit||'')+'</td><td class="nr">'+fmt(item.unitPrice)+'</td><td class="nr">'+fmtC(item.total)+'</td>';h+='<td><select class="pm-edit" style="width:65px;font-size:70%" onchange="parseResFieldChange('+idx+','+"'section'"+',this.value)"><option value="">-</option>';secs.forEach(function(s){h+='<option'+(item.section===s?' selected':'')+'>'+s+'</option>'});h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td>';h+='<td><select class="pm-edit" style="width:85px;font-size:70%" onchange="parseResFieldChange('+idx+','+"'category'"+',this.value)"><option value="">-</option>';var itemCats=getPurCats(i.section);itemCats.forEach(function(c){h+='<option'+(i.category===c?' selected':'')+'>'+c+'</option>'});h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td></tr>'});h+='</table></div></div>';h+='<div class="brow" style="margin-top:14px"><button class="btn p" onclick="doMimoConfirm()">确认并编辑</button><button class="btn" onclick="closeModal()">取消</button></div>';showModal(h)}
 
@@ -736,7 +848,7 @@ function doMimoConfirm(){var r=window._mimoResult;if(!r)return;var src=document.
 function doParsePur(){var text=$id('ptInput').value.trim();if(!text)return;var result=parsePurchase(text);if(!result.items.length){toast('未识别');return}var srcTotal=result.items.reduce(function(s,i){return s+i.total},0);var secs=['厨房','吧台','外场'];var cats=getPurCats();var h='';h+='<h3>识别结果</h3>';h+='<div class="cards">';h+='<div class="card"><div class="card-l">日期</div><div class="card-v">'+result.date+'</div></div>';h+='<div class="card"><div class="card-l">物品</div><div class="card-v ac">'+result.items.length+'项</div></div>';h+='<div class="card"><div class="card-l">合计</div><div class="card-v">'+fmtC(srcTotal)+'</div></div>';h+='<div class="card"><div class="card-l">来源</div><div class="card-v">'+result.source+'</div></div>';h+='</div>';h+='<div class="hrow"><label>来源</label><select class="inp" id="pResSrc" style="max-width:120px" onchange="toggleCustomInput(this,\'pResSrcC\')">';h+='<option'+(result.source==='岸香贸易'?' selected':'')+'>岸香贸易</option>';h+='<option'+(result.source==='外购'?' selected':'')+'>外购</option>';h+='<option value="__custom">自定义</option></select>';h+='<input class="inp" id="pResSrcC" style="display:none;max-width:120px" placeholder="输入来源"></div>';h+='<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';h+='<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';h+='<div class="hrow"><label>区域</label><select class="inp" id="parseBatchSec" style="max-width:110px"><option value="">不填充</option>';secs.forEach(function(s){h+='<option>'+s+'</option>'});h+='</select><button class="btn s" onclick="parseBatchFill(\'section\')">应用</button>';h+='<label style="margin-left:10px">分类</label><select class="inp" id="parseBatchCat" style="max-width:130px"><option value="">不填充</option>';cats.forEach(function(c){h+='<option>'+c+'</option>'});h+='</select><button class="btn s" onclick="parseBatchFill(\'category\')">应用</button></div></div>';h+='<div class="sec">物品列表</div><div id="parseTableWrap"><div class="tw"><table id="parseTbl">';h+='<tr><th>品名</th><th>数量</th><th>单价</th><th>总价</th><th>区域</th><th>分类</th></tr>';result.items.forEach(function(item,idx){h+='<tr><td>'+item.name+'</td><td class="nr">'+item.qty+(item.unit||'')+'</td><td class="nr">'+fmt(item.unitPrice)+'</td><td class="nr">'+fmtC(item.total)+'</td>';h+='<td><select class="pm-edit" style="width:65px;font-size:70%" onchange="parseResFieldChange('+idx+',\'section\',this.value)"><option value="">-</option>';secs.forEach(function(s){h+='<option'+(item.section===s?' selected':'')+'>'+s+'</option>'});h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td>';h+='<td><select class="pm-edit" style="width:85px;font-size:70%" onchange="parseResFieldChange('+idx+',\'category\',this.value)"><option value="">-</option>';var itemCats=getPurCats(i.section);itemCats.forEach(function(c){h+='<option'+(i.category===c?' selected':'')+'>'+c+'</option>'});h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td></tr>'});h+='</table></div></div>';h+='<div class="brow" style="margin-top:14px"><button class="btn p" onclick="doParsePurConfirm()">确认并编辑</button><button class="btn" onclick="closeModal()">取消</button></div>';showModal(h);window._parseResult=result}
 function doAIParse() {
     if (!localStorage.getItem('ax_mimo_ep') || !localStorage.getItem('ax_mimo_key')) {
-        toast('请先在备份页配置MiMo API');
+        toast('请先在设置页配置MiMo API');
         return;
     }
     var input = document.createElement('input');
@@ -1852,10 +1964,659 @@ h += '<div class="hrow"><label>API Key</label><input class="inp" id="mimoKey" st
 h+='<div class="hrow"><label>模型</label><select class="inp" id="mimoModel" style="max-width:200px">';var mimoModels=['MiMo-V2.5-Pro','MiMo-V2.5','MiMo-V2.5-TTS-VoiceClone','MiMo-V2.5-TTS-VoiceDesign','MiMo-V2.5-TTS','MiMo-V2-Pro','MiMo-V2-Omni','MiMo-V2-TTS'];var curModel=localStorage.getItem('ax_mimo_model')||'MiMo-V2.5-Pro';mimoModels.forEach(function(m){h+='<option'+(curModel===m?' selected':'')+'>'+m+'</option>'});h+='</select></div>';
 h += '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="saveMimoCfg()">保存配置</button></div>';
 h += '</div>';
-h+='<div class="sec">GitHub 同步</div>';if(!_gh.ready){h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><h4 style="font-size:.84rem;margin-bottom:8px">设置同步</h4><p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--ac)">创建Token</a> → 勾选 gist</p><div class="hrow"><input class="inp" id="ghTK" placeholder="ghp_xxxx..."></div><div class="brow" style="margin-top:8px"><button class="btn p" onclick="ghSetToken(document.getElementById(\'ghTK\').value)">连接</button></div></div>'}else{h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><p style="font-size:.74rem;color:var(--gn)">已连接 · Gist: '+(_gh.gistId||'创建中')+'</p><div class="brow"><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button><button class="btn d s" onclick="ghDisconnect()">断开</button></div></div>'}h+='<div class="sec">数据码</div><div class="brow"><button class="btn" onclick="genSyncCode()">生成</button><button class="btn" onclick="importSyncCode()">导入</button></div>';h+='<div class="sec">备份</div><div class="cards"><div class="card"><div class="card-l">日报</div><div class="card-v">'+DB.dailyReports.length+'</div></div><div class="card"><div class="card-l">采购</div><div class="card-v">'+DB.purchases.length+'</div></div><div class="card"><div class="card-l">费用</div><div class="card-v">'+DB.expenses.length+'</div></div><div class="card"><div class="card-l">仓库</div><div class="card-v">'+(DB.whItems||[]).length+'</div></div></div><div class="brow"><button class="btn" onclick="expJSON()">导出JSON</button><input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)"><button class="btn" onclick="document.getElementById(\'impF\').click()">导入</button></div>';h+='<div class="sec">示例</div><div class="brow"><button class="btn" onclick="loadSample()">加载示例</button></div><div class="sec" style="color:var(--rd)">危险</div><div class="brow"><button class="btn d" onclick="if(confirm(\'清空？\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';setMain('备份',h)}
+h+='<div class="sec">GitHub 同步</div>';if(!_gh.ready){h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><h4 style="font-size:.84rem;margin-bottom:8px">设置同步</h4><p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--ac)">创建Token</a> → 勾选 gist</p><div class="hrow"><input class="inp" id="ghTK" placeholder="ghp_xxxx..."></div><div class="brow" style="margin-top:8px"><button class="btn p" onclick="ghSetToken(document.getElementById(\'ghTK\').value)">连接</button></div></div>'}else{h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><p style="font-size:.74rem;color:var(--gn)">已连接 · Gist: '+(_gh.gistId||'创建中')+'</p><div class="brow"><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button><button class="btn d s" onclick="ghDisconnect()">断开</button></div></div>'}h+='<div class="sec">数据码</div><div class="brow"><button class="btn" onclick="genSyncCode()">生成</button><button class="btn" onclick="importSyncCode()">导入</button></div>';h+='<div class="sec">设置</div><div class="cards"><div class="card"><div class="card-l">日报</div><div class="card-v">'+DB.dailyReports.length+'</div></div><div class="card"><div class="card-l">采购</div><div class="card-v">'+DB.purchases.length+'</div></div><div class="card"><div class="card-l">费用</div><div class="card-v">'+DB.expenses.length+'</div></div><div class="card"><div class="card-l">仓库</div><div class="card-v">'+(DB.whItems||[]).length+'</div></div></div><div class="brow"><button class="btn" onclick="expJSON()">导出JSON</button><input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)"><button class="btn" onclick="document.getElementById(\'impF\').click()">导入</button></div>';h+='<div class="sec">示例</div><div class="brow"><button class="btn" onclick="loadSample()">加载示例</button></div><div class="sec" style="color:var(--rd)">危险</div><div class="brow"><button class="btn d" onclick="if(confirm(\'清空？\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';setMain('设置',h)}
 function expJSON(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}));a.download='岸香咖啡_'+td()+'.json';a.click();toast('已导出')}
 function impJSON(event){var f=event.target.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(e){try{DB=JSON.parse(e.target.result);saveDB(DB);ghScheduleSave();toast('已导入');rData()}catch(err){toast('失败')}};reader.readAsText(f);event.target.value=''}
 function loadSample(){var d=initDB();for(var i=0;i<7;i++){var dd=new Date();dd.setDate(dd.getDate()-i);var ds=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');var net=3200+Math.round(Math.random()*1200);d.dailyReports.push({date:ds,revenue:{grossSales:net+300,discount:Math.round(Math.random()*300),netSales:net,kitchenSales:Math.round(net*.65),barSales:Math.round(net*.25),cigarette:{total:100+Math.round(Math.random()*200),items:{金皖:Math.round(Math.random()*10)}},other:Math.round(Math.random()*150),otherItems:{}},payment:{pos:Math.round(net*.7),ccbLife:0,cash:Math.round(net*.05),memberCard:Math.round(net*.1),ar:{total:0,meituan:0,douyin:0},treat:0},delivery:{total:Math.round(Math.random()*700),meituan:Math.round(Math.random()*400),taobao:0,jd:0},guest:{count:35+Math.round(Math.random()*25),avgSpend:0,premiumRoomsToday:0},rooms:[],premiumRooms:{today:0},teaSales:{},cigSales:{},alcSales:{},reporter:'示例'})}d.cigItems=[{id:'cig_1',name:'黄山（金皖）',costPerUnit:24,pricePerUnit:28,openingStock:30,restockAlert:15,purchaseUnit:'条',purchaseConvRatio:10,purchases:[],sales:[]}];d.alcItems=[{id:'alc_1',name:'百威啤酒',costPerUnit:6,pricePerUnit:15,openingStock:48,restockAlert:10,purchaseUnit:'箱',purchaseConvRatio:24,purchases:[],sales:[]}];d.whItems=[{id:'wh_1',name:'一次性手套',category:'包装',unit:'箱',stock:5,safeStock:2,movements:[]},{id:'wh_2',name:'吸管',category:'包装',unit:'包',stock:20,safeStock:10,movements:[]},{id:'wh_3',name:'柠檬汁',category:'调料',unit:'瓶',stock:2,safeStock:1,movements:[]},{id:'wh_6',name:'打包盒',category:'包装',unit:'箱',stock:3,safeStock:5,movements:[]}];d.expenses=[{id:'e_1',date:'2026-05-01',category:'水电煤',amount:2800,note:'',photoFile:''}];d.purchases=[{id:'p_1',date:'2026-05-01',source:'岸香贸易',items:[{name:'古越龙山500ML绍兴花雕酒',section:'厨房',category:'调料/粮油',qty:1,unit:'件',unitPrice:69,total:69,source:'岸香贸易'},{name:'中盐500G精制食盐',section:'厨房',category:'调料/粮油',qty:1,unit:'件',unitPrice:46,total:46,source:'岸香贸易'},{name:'赢鸿5L菜籽油',section:'厨房',category:'调料/粮油',qty:2,unit:'桶',unitPrice:87.20,total:174.40,source:'岸香贸易'},{name:'凤珠暖2.5KG雪花生粉',section:'厨房',category:'调料/粮油',qty:1,unit:'袋',unitPrice:28.64,total:28.64,source:'岸香贸易'},{name:'海麟娃108G什锦蔬菜干',section:'吧台',category:'其他',qty:1,unit:'件',unitPrice:179.92,total:179.92,source:'岸香贸易'}]},{id:'p_2',date:'2026-05-03',source:'岸香贸易',items:[{name:'古越龙山500ML绍兴花雕酒',section:'厨房',category:'调料/粮油',qty:2,unit:'件',unitPrice:72,total:144,source:'岸香贸易'},{name:'赢鸿5L菜籽油',section:'厨房',category:'调料/粮油',qty:1,unit:'桶',unitPrice:89.50,total:89.50,source:'岸香贸易'}]}];d.damageRecords=[];DB=d;saveDB(DB);ghScheduleSave();toast('已加载');rData()}
+
+// =============AI 助手页面================
+// 9个AI功能的入口
+// ========================================
+function rAI() {
+    var h = '';
+
+    h += '<div style="margin-bottom:14px;padding:12px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r)">';
+    h += '<div style="font-size:.78rem;color:var(--tx-s)">MiMo AI 助手，基于小米MiMo大模型。所有功能需要先在备份页配置API。</div>';
+    h += '</div>';
+
+    // 第一行：解析类
+    h += '<div class="sec">智能解析</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiDailyParse()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">📝 智能日报解析</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">粘贴日报文字，AI自动识别填入</div></div>';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiExpenseClassify()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">🏷️ 费用智能分类</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">输入费用描述，AI自动判断分类</div></div>';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiReceiptOCR()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">📸 费用单据识别</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">拍照费用单据，AI识别金额日期</div></div>';
+
+    h += '</div>';
+
+    // 第二行：分析类
+    h += '<div class="sec">智能分析</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiAnomaly()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">⚠️ 异常检测</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">AI分析数据，发现价格波动、异常消费</div></div>';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiRestockAlert()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">📦 智能补货建议</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">根据消耗速度预测何时需要补货</div></div>';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiPurchaseAdvice()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">🛒 采购建议</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">分析历史采购，给出优化建议</div></div>';
+
+    h += '</div>';
+
+    // 第三行：报告类
+    h += '<div class="sec">智能报告</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiMonthlyReport()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">📊 月度经营报告</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">AI生成月度分析报告，可导出PDF</div></div>';
+
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;cursor:pointer" onclick="aiBusinessAnalysis()">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:4px">💡 经营分析建议</div>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m)">AI分析趋势，给出经营建议</div></div>';
+
+    h += '</div>';
+
+    // 自然语言查询
+    h += '<div class="sec">智能问答</div>';
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:8px">💬 向AI提问</div>';
+    h += '<textarea id="aiQuestion" placeholder="随便问，比如：\n上个月厨房花了多少钱？\n本月利润率是多少？\n哪种香烟卖得最好？" style="width:100%;min-height:80px"></textarea>';
+    h += '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="aiAskQuestion()">提问</button></div>';
+    h += '<div id="aiAnswer"></div>';
+    h += '</div>';
+
+    setMain('AI 助手', h);
+}
+// ========================================
+// 功能1：智能日报解析
+// 粘贴日报文字 → MiMo解析 → 弹窗确认 → 保存
+// ========================================
+function aiDailyParse() {
+    var h = '<h3>智能日报解析</h3>';
+    h += '<textarea id="aiDailyText" placeholder="粘贴日报文字...\n支持口语化表述，如：\n今天厨房卖了2100，吧台800，实收2700..." style="width:100%;min-height:150px"></textarea>';
+    h += '<div class="brow" style="margin-top:10px"><button class="btn p" onclick="doAiDailyParse()">AI解析</button></div>';
+    h += '<div id="aiDailyResult"></div>';
+    showModal(h, 600);
+}
+
+function doAiDailyParse() {
+    var text = document.getElementById('aiDailyText').value.trim();
+    if (!text) { toast('请粘贴日报文字'); return; }
+
+    toast('AI正在解析...');
+
+    var prompt = '请解析以下餐厅日报文字，提取经营数据。文字可能是口语化或非标准格式，请智能理解和纠正。\n\n'
+        + '请严格按以下JSON格式返回，不要有任何其他文字：\n\n'
+        + '{\n'
+        + '  "date": "日期YYYY-MM-DD，没有就留空",\n'
+        + '  "revenue": {\n'
+        + '    "grossSales": 流水金额,\n'
+        + '    "discount": 折扣金额,\n'
+        + '    "netSales": 实收金额,\n'
+        + '    "kitchenSales": 厨房销售,\n'
+        + '    "barSales": 吧台销售,\n'
+        + '    "cigarette": 香烟金额,\n'
+        + '    "other": 其他金额\n'
+        + '  },\n'
+        + '  "payment": {\n'
+        + '    "pos": POS金额,\n'
+        + '    "cash": 现金金额,\n'
+        + '    "memberCard": 会员卡金额\n'
+        + '  },\n'
+        + '  "guest": {\n'
+        + '    "count": 客流人数,\n'
+        + '    "avgSpend": 人均消费\n'
+        + '  },\n'
+        + '  "reporter": "汇报人，没有就留空"\n'
+        + '}\n\n'
+        + '注意：\n'
+        + '1. 某字段没提到就填0\n'
+        + '2. "厨房卖了2100" = kitchenSales: 2100\n'
+        + '3. "实收" = netSales\n'
+        + '4. 只返回JSON\n\n'
+        + '以下是日报文字：\n---\n' + text + '\n---';
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+
+        var m = reply.match(/\{[\s\S]*\}/);
+        if (!m) { toast('AI未返回JSON'); return; }
+
+        try {
+            var result = JSON.parse(m[0]);
+            // 弹窗展示结果
+            showAiDailyConfirm(result, text);
+        } catch(e) {
+            toast('JSON解析失败');
+            console.error(e);
+        }
+    }, {temperature: 0.1});
+}
+
+function showAiDailyConfirm(data, originalText) {
+    var date = data.date || td();
+    var r = data.revenue || {};
+    var p = data.payment || {};
+    var g = data.guest || {};
+
+    var h = '<h3>AI解析结果</h3>';
+    h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
+
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="aid_date" type="date" value="' + date + '"></div>';
+
+    h += '<div class="section-label">营收</div>';
+    h += '<div class="hrow"><label>流水</label><input class="inp" id="aid_gross" type="number" value="' + (r.grossSales||0) + '">';
+    h += '<label>实收</label><input class="inp" id="aid_net" type="number" value="' + (r.netSales||0) + '"></div>';
+    h += '<div class="hrow"><label>厨房</label><input class="inp" id="aid_kitchen" type="number" value="' + (r.kitchenSales||0) + '">';
+    h += '<label>吧台</label><input class="inp" id="aid_bar" type="number" value="' + (r.barSales||0) + '"></div>';
+    h += '<div class="hrow"><label>香烟</label><input class="inp" id="aid_cig" type="number" value="' + (r.cigarette||0) + '">';
+    h += '<label>其他</label><input class="inp" id="aid_other" type="number" value="' + (r.other||0) + '"></div>';
+
+    h += '<div class="section-label">支付</div>';
+    h += '<div class="hrow"><label>POS</label><input class="inp" id="aid_pos" type="number" value="' + (p.pos||0) + '">';
+    h += '<label>现金</label><input class="inp" id="aid_cash" type="number" value="' + (p.cash||0) + '">';
+    h += '<label>会员</label><input class="inp" id="aid_member" type="number" value="' + (p.memberCard||0) + '"></div>';
+
+    h += '<div class="section-label">客情</div>';
+    h += '<div class="hrow"><label>人数</label><input class="inp" id="aid_count" type="number" value="' + (g.count||0) + '">';
+    h += '<label>人均</label><input class="inp" id="aid_avg" type="number" value="' + (g.avgSpend||0) + '"></div>';
+
+    h += '<div class="hrow"><label>汇报人</label><input class="inp" id="aid_reporter" value="' + (data.reporter||'') + '"></div>';
+
+    h += '</div>';
+
+    h += '<div class="brow" style="margin-top:12px">';
+    h += '<button class="btn p" onclick="saveAiDaily()">覆盖保存</button>';
+    h += '<button class="btn g" onclick="saveAiDaily(\'merge\')">合并保存</button>';
+    h += '<button class="btn" onclick="closeModal()">取消</button></div>';
+
+    showModal(h, 550);
+}
+
+function saveAiDaily(mode) {
+    var date = document.getElementById('aid_date').value || td();
+
+    var report = {
+        date: date,
+        revenue: {
+            grossSales: parseFloat(document.getElementById('aid_gross').value) || 0,
+            discount: 0,
+            netSales: parseFloat(document.getElementById('aid_net').value) || 0,
+            kitchenSales: parseFloat(document.getElementById('aid_kitchen').value) || 0,
+            barSales: parseFloat(document.getElementById('aid_bar').value) || 0,
+            cigarette: { total: parseFloat(document.getElementById('aid_cig').value) || 0, items: {} },
+            other: parseFloat(document.getElementById('aid_other').value) || 0,
+            otherItems: {}
+        },
+        payment: {
+            pos: parseFloat(document.getElementById('aid_pos').value) || 0,
+            ccbLife: 0, cash: parseFloat(document.getElementById('aid_cash').value) || 0,
+            memberCard: parseFloat(document.getElementById('aid_member').value) || 0,
+            ar: { total: 0, meituan: 0, douyin: 0 }, treat: 0
+        },
+        delivery: { total: 0, meituan: 0, taobao: 0, jd: 0 },
+        guest: {
+            count: parseInt(document.getElementById('aid_count').value) || 0,
+            avgSpend: parseFloat(document.getElementById('aid_avg').value) || 0,
+            premiumRoomsToday: 0
+        },
+        rooms: [], premiumRooms: { today: 0 },
+        teaSales: {}, cigSales: {}, alcSales: {},
+        reporter: document.getElementById('aid_reporter').value.trim()
+    };
+
+    upd(function(db) {
+        if (mode === 'merge') {
+            var existing = db.dailyReports.find(function(d) { return d.date === date; });
+            if (existing) {
+                // 合并：只更新非零字段
+                Object.keys(report.revenue).forEach(function(k) {
+                    if (report.revenue[k] && typeof report.revenue[k] === 'number') existing.revenue[k] = report.revenue[k];
+                });
+                Object.keys(report.payment).forEach(function(k) {
+                    if (report.payment[k] && typeof report.payment[k] === 'number') existing.payment[k] = report.payment[k];
+                });
+                if (report.guest.count) existing.guest.count = report.guest.count;
+                if (report.guest.avgSpend) existing.guest.avgSpend = report.guest.avgSpend;
+                if (report.reporter) existing.reporter = report.reporter;
+                return;
+            }
+        }
+        var idx = db.dailyReports.findIndex(function(d) { return d.date === date; });
+        if (idx >= 0) db.dailyReports[idx] = report;
+        else db.dailyReports.push(report);
+    });
+
+    toast('日报已保存');
+    closeModal();
+}
+
+// ========================================
+// 功能2：费用智能分类
+// 输入费用描述 → MiMo判断分类
+// ========================================
+function aiExpenseClassify() {
+    var h = '<h3>费用智能分类</h3>';
+    h += '<div class="hrow"><label>费用描述</label><input class="inp" id="aiExpDesc" placeholder="如：交了电费380元" style="flex:2"></div>';
+    h += '<div class="brow" style="margin-top:10px"><button class="btn p" onclick="doAiExpenseClassify()">智能分类</button></div>';
+    h += '<div id="aiExpResult"></div>';
+    showModal(h, 450);
+}
+
+function doAiExpenseClassify() {
+    var desc = document.getElementById('aiExpDesc').value.trim();
+    if (!desc) { toast('输入费用描述'); return; }
+
+    var cats = getExpCats();
+    var prompt = '请判断以下费用描述属于什么分类。\n\n'
+        + '可选分类：' + cats.join('、') + '\n\n'
+        + '请严格按以下JSON格式返回：\n'
+        + '{"category": "分类名", "amount": 金额数字, "reason": "判断理由"}\n\n'
+        + '如果描述中提到了金额就提取出来，没有就amount填0。\n'
+        + '只返回JSON，不要其他文字。\n\n'
+        + '费用描述：' + desc;
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+        var m = reply.match(/\{[\s\S]*\}/);
+        if (!m) { toast('AI未返回JSON'); return; }
+
+        try {
+            var result = JSON.parse(m[0]);
+            var el = document.getElementById('aiExpResult');
+            el.innerHTML = '<div style="margin-top:10px;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">'
+                + '<div style="font-size:.84rem;font-weight:700">分类：' + result.category + '</div>'
+                + '<div style="font-size:.78rem;color:var(--tx-s);margin-top:4px">金额：' + (result.amount || '待填') + '</div>'
+                + '<div style="font-size:.72rem;color:var(--tx-m);margin-top:4px">' + (result.reason || '') + '</div>'
+                + '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="goExpenseWithCategory(\'' + result.category + '\',' + (result.amount||0) + ')">去录入</button></div>'
+                + '</div>';
+        } catch(e) {
+            toast('解析失败');
+        }
+    }, {temperature: 0.1});
+}
+
+function goExpenseWithCategory(cat, amount) {
+    closeModal();
+    goPage('expense');
+    setTimeout(function() {
+        var catSel = document.getElementById('expCatSel');
+        if (catSel) {
+            // 查找分类选项
+            var found = false;
+            for (var i = 0; i < catSel.options.length; i++) {
+                if (catSel.options[i].value === cat) { catSel.selectedIndex = i; found = true; break; }
+            }
+            if (!found) {
+                // 添加自定义分类
+                var opt = document.createElement('option');
+                opt.text = cat;
+                catSel.insertBefore(opt, catSel.querySelector('[value="__custom"]'));
+                catSel.value = cat;
+            }
+        }
+        if (amount > 0) {
+            var amtEl = document.getElementById('expAmt');
+            if (amtEl) amtEl.value = amount;
+        }
+    }, 100);
+}
+
+// ========================================
+// 功能3：费用单据识别
+// 拍照 → MiMo识别金额日期分类
+// ========================================
+function aiReceiptOCR() {
+    if (!localStorage.getItem('ax_mimo_key')) {
+        toast('请先在备份页配置MiMo API');
+        return;
+    }
+
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var maxW = 1600;
+                var w = img.width, h = img.height;
+                if (w > maxW) { h = h * maxW / w; w = maxW; }
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                var base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+                toast('AI正在识别...');
+
+                mimoOCR(base64, function(reply) {
+                    if (!reply) return;
+                    var m = reply.match(/\{[\s\S]*\}/);
+                    if (!m) { toast('识别失败'); return; }
+
+                    try {
+                        var result = JSON.parse(m[0]);
+                        var cats = getExpCats();
+                        var h = '<h3>识别结果</h3>';
+                        h += '<div class="hrow"><label>日期</label><input class="inp" id="ocr_date" type="date" value="' + (result.date || td()) + '"></div>';
+                        h += '<div class="hrow"><label>分类</label><select class="inp" id="ocr_cat"><option value="">请选择</option>';
+                        cats.forEach(function(c) { h += '<option' + (result.category === c ? ' selected' : '') + '>' + c + '</option>'; });
+                        h += '</select></div>';
+                        h += '<div class="hrow"><label>金额</label><input class="inp" id="ocr_amount" type="number" value="' + (result.amount || 0) + '"></div>';
+                        h += '<div class="hrow"><label>备注</label><input class="inp" id="ocr_note" value="' + (result.description || '') + '"></div>';
+                        h += '<div class="brow" style="margin-top:12px"><button class="btn p" onclick="saveOcrExpense()">保存</button><button class="btn" onclick="closeModal()">取消</button></div>';
+                        showModal(h, 450);
+                    } catch(e) {
+                        toast('解析失败');
+                    }
+                });
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+function saveOcrExpense() {
+    var cat = document.getElementById('ocr_cat').value;
+    var amount = parseFloat(document.getElementById('ocr_amount').value) || 0;
+    if (!cat || !amount) { toast('填分类和金额'); return; }
+
+    upd(function(db) {
+        db.expenses.push({
+            id: 'e_' + Date.now(),
+            date: document.getElementById('ocr_date').value || td(),
+            category: cat,
+            amount: amount,
+            note: document.getElementById('ocr_note').value.trim(),
+            photoFile: ''
+        });
+    });
+    toast('已保存');
+    closeModal();
+}
+
+// ========================================
+// 功能4：异常检测
+// 把本月数据发给MiMo，让它找异常
+// ========================================
+function aiAnomaly() {
+    var ym = curYM();
+    toast('AI正在分析...');
+
+    var summary = buildMonthSummary(ym);
+
+    // 加上采购明细
+    var purLines = [];
+    DB.purchases.filter(function(p) { return p.date.startsWith(ym); }).forEach(function(p) {
+        p.items.forEach(function(i) {
+            purLines.push(p.date + ' ' + i.name + ' ' + i.qty + (i.unit||'') + ' 单价' + i.unitPrice + ' 总价' + i.total);
+        });
+    });
+
+    var prompt = '你是一个餐厅财务分析师。请分析以下经营数据，找出异常或值得关注的问题。\n\n'
+        + '分析维度：\n'
+        + '1. 日营收波动（是否有某天特别高或低）\n'
+        + '2. 采购价格波动（同一物品价格是否异常）\n'
+        + '3. 成本率是否正常\n'
+        + '4. 客流与营收是否匹配\n'
+        + '5. 其他你认为需要注意的问题\n\n'
+        + '请用简洁的列表形式返回，每条异常用⚠️标注。没有异常就说"暂无异常"。\n\n'
+        + '经营数据：\n' + summary + '\n\n'
+        + '采购明细：\n' + purLines.join('\n');
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+        var h = '<h3>异常检测报告</h3>';
+        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
+        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h, 600);
+    });
+}
+
+// ========================================
+// 功能5：智能补货建议
+// 分析库存+历史消耗，预测何时需要补货
+// ========================================
+function aiRestockAlert() {
+    toast('AI正在分析...');
+
+    // 收集库存数据
+    var inventory = [];
+
+    DB.cigItems.forEach(function(item) {
+        var c = invCalc(item, 'cig');
+        inventory.push('香烟 ' + item.name + ' 库存' + c.stock + '包 安全线' + (item.restockAlert||0));
+    });
+
+    DB.alcItems.forEach(function(item) {
+        var c = invCalc(item, 'alc');
+        inventory.push('酒类 ' + item.name + ' 库存' + c.stock + '瓶 安全线' + (item.restockAlert||0));
+    });
+
+    (DB.whItems || []).forEach(function(item) {
+        inventory.push('仓库 ' + item.name + ' 库存' + item.stock + (item.unit||'') + ' 安全线' + (item.safeStock||0));
+    });
+
+    DB.teaItems.forEach(function(item) {
+        var c = invCalc(item, 'tea');
+        var unit = item.calcMode === 'pack' ? '包' : '克';
+        inventory.push('茗茶 ' + item.name + ' 库存' + c.stock + unit + ' 安全线' + (item.restockAlert||0));
+    });
+
+    // 收集近期销售数据
+    var salesLines = [];
+    var ym = curYM();
+    DB.cigItems.forEach(function(item) {
+        var sales = item.sales.filter(function(s) { return s.date.startsWith(ym); });
+        if (sales.length) {
+            var total = sales.reduce(function(s, r) { return s + (r.qty||0); }, 0);
+            salesLines.push('香烟 ' + item.name + ' 本月已售' + total + '包');
+        }
+    });
+
+    DB.alcItems.forEach(function(item) {
+        var sales = item.sales.filter(function(s) { return s.date.startsWith(ym); });
+        if (sales.length) {
+            var total = sales.reduce(function(s, r) { return s + (r.qty||0); }, 0);
+            salesLines.push('酒类 ' + item.name + ' 本月已售' + total + '瓶');
+        }
+    });
+
+    var prompt = '你是一个餐厅库存管理顾问。请根据以下库存和销售数据，给出补货建议。\n\n'
+        + '请对每个物品评估：\n'
+        + '1. 当前库存是否充足\n'
+        + '2. 根据消耗速度，预计多久后用完\n'
+        + '3. 是否需要立即补货\n\n'
+        + '请用简洁列表返回，紧急的用🔴标注，建议的用🟡标注，充足的用🟢标注。\n\n'
+        + '当前库存：\n' + (inventory.length ? inventory.join('\n') : '暂无') + '\n\n'
+        + '本月销售：\n' + (salesLines.length ? salesLines.join('\n') : '暂无');
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+        var h = '<h3>智能补货建议</h3>';
+        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
+        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h, 600);
+    });
+}
+
+// ========================================
+// 功能6：采购建议
+// 分析历史采购模式，优化采购计划
+// ========================================
+function aiPurchaseAdvice() {
+    toast('AI正在分析...');
+
+    var ym = curYM();
+    var purLines = [];
+    DB.purchases.filter(function(p) { return p.date.startsWith(ym); }).forEach(function(p) {
+        p.items.forEach(function(i) {
+            purLines.push(p.date + ' ' + (i.source||p.source||'') + ' ' + i.name + ' ' + i.qty + (i.unit||'') + ' ¥' + i.total);
+        });
+    });
+
+    var prompt = '你是一个餐厅采购顾问。请分析以下采购数据，给出优化建议。\n\n'
+        + '请分析：\n'
+        + '1. 采购频率是否合理\n'
+        + '2. 供应商价格对比（同一物品不同日期的价格变化）\n'
+        + '3. 是否有合并采购节省成本的机会\n'
+        + '4. 哪些物品可以考虑换供应商\n\n'
+        + '请用简洁列表返回。\n\n'
+        + '本月采购明细：\n' + (purLines.length ? purLines.join('\n') : '暂无');
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+        var h = '<h3>采购优化建议</h3>';
+        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
+        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h, 600);
+    });
+}
+
+// ========================================
+// 功能7：月度经营报告
+// AI生成分析报告，可导出HTML
+// ========================================
+function aiMonthlyReport() {
+    var ym = curYM();
+    var h = '<h3>月度经营报告</h3>';
+    h += '<div class="hrow"><label>月份</label><input class="inp" id="aiRepM" type="month" value="' + ym + '" style="max-width:180px"></div>';
+    h += '<div class="brow"><button class="btn p" onclick="doAiMonthlyReport()">生成报告</button></div>';
+    h += '<div id="aiRepResult"></div>';
+    showModal(h, 600);
+}
+
+function doAiMonthlyReport() {
+    var ym = document.getElementById('aiRepM').value || curYM();
+    toast('AI正在生成报告...');
+
+    var summary = buildMonthSummary(ym);
+    var title = ym.replace('-', '年') + '月经营报告';
+
+    var prompt = '你是一个餐厅财务分析师。请根据以下数据，写一份简洁的月度经营报告。\n\n'
+        + '报告需要包含：\n'
+        + '1. 总体经营概况（1-2句话总结）\n'
+        + '2. 营收分析（结构、趋势）\n'
+        + '3. 成本分析（采购、费用）\n'
+        + '4. 客流分析\n'
+        + '5. 下月建议（2-3条具体建议）\n\n'
+        + '请用清晰的段落格式，使用数字和百分比。语言要专业但易懂。\n\n'
+        + '经营数据：\n' + summary;
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+
+        var el = document.getElementById('aiRepResult');
+        el.innerHTML = '<div style="margin-top:10px;padding:14px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">'
+            + reply
+            + '</div>'
+            + '<div class="brow" style="margin-top:10px"><button class="btn p" onclick="exportReportPDF()">导出PDF</button></div>';
+
+        // 保存报告内容供导出用
+        window._aiReport = { title: title, content: reply, ym: ym };
+    });
+}
+
+function exportReportPDF() {
+    var r = window._aiReport;
+    if (!r) return;
+
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + r.title + '</title>'
+        + '<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Lexend:wght@400;500&display=swap" rel="stylesheet">'
+        + '<style>'
+        + '*{margin:0;padding:0;box-sizing:border-box}'
+        + 'body{font-family:"Noto Serif SC",serif;padding:50px;max-width:800px;margin:auto;color:#2c2c2c;line-height:2}'
+        + '@media print{body{padding:20px}}'
+        + 'h1{font-size:1.5rem;color:#b08d57;text-align:center;margin-bottom:30px}'
+        + '.content{font-size:.9rem;white-space:pre-wrap}'
+        + '.footer{text-align:center;color:#aaa;font-size:.7rem;margin-top:50px}'
+        + '</style></head><body>'
+        + '<h1>岸香咖啡 · ' + r.title + '</h1>'
+        + '<div class="content">' + r.content.replace(/\n/g, '<br>') + '</div>'
+        + '<div class="footer">由MiMo AI生成 · ' + td() + '</div>'
+        + '</body></html>';
+
+    window.open('', '_blank').document.write(html);
+    toast('请在新页面中按 Ctrl+P 打印/导出PDF');
+}
+
+// ========================================
+// 功能8：经营分析建议
+// AI分析趋势，给出战略建议
+// ========================================
+function aiBusinessAnalysis() {
+    toast('AI正在分析...');
+
+    var ym = curYM();
+    var summary = buildMonthSummary(ym);
+
+    var prompt = '你是一个资深餐饮顾问。请根据以下经营数据，给出深度经营分析和战略建议。\n\n'
+        + '请从以下角度分析：\n'
+        + '1. 收入结构是否健康（厨房/吧台/外卖比例）\n'
+        + '2. 盈利能力评估（毛利率、净利率）\n'
+        + '3. 运营效率（人均消费、翻台率趋势）\n'
+        + '4. 具体可执行的改进措施（至少3条）\n\n'
+        + '请给出专业、具体、可执行的建议，不要空话。\n\n'
+        + '经营数据：\n' + summary;
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) return;
+        var h = '<h3>经营分析建议</h3>';
+        h += '<div style="max-height:60vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
+        h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        showModal(h, 600);
+    });
+}
+
+// ========================================
+// 功能9：自然语言查询
+// 用户随便问，MiMo从数据中找答案
+// ========================================
+function aiAskQuestion() {
+    var q = document.getElementById('aiQuestion').value.trim();
+    if (!q) { toast('请输入问题'); return; }
+
+    var el = document.getElementById('aiAnswer');
+    el.innerHTML = '<div style="padding:10px;color:var(--tx-m)">AI正在思考...</div>';
+
+    var ym = curYM();
+    var summary = buildMonthSummary(ym);
+
+    var prompt = '你是一个餐厅数据分析助手。请根据以下经营数据回答用户的问题。\n'
+        + '回答要简洁准确，有数据支撑。如果数据中没有相关信息，就说"数据中没有找到相关信息"。\n\n'
+        + '当前经营数据：\n' + summary + '\n\n'
+        + '用户问题：' + q;
+
+    mimoChat(prompt, function(reply) {
+        if (!reply) {
+            el.innerHTML = '<div style="padding:10px;color:var(--rd)">回答失败</div>';
+            return;
+        }
+        el.innerHTML = '<div style="margin-top:10px;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8;white-space:pre-wrap">' + reply + '</div>';
+    });
+}
 
 // ===== INIT =====
 var _savedFS=localStorage.getItem('ax_fs');if(_savedFS)document.documentElement.style.fontSize=_savedFS+'px';
