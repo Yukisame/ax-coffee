@@ -524,6 +524,40 @@ function parsePurchase(text) {
     return r;
 }
 
+// ========================================
+// 内置默认配置（首次打开自动加载）
+// 如果需要修改，直接改这里的值即可
+// ========================================
+var DEFAULT_CONFIG = {
+    // GitHub 同步
+    github_token: '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',
+    github_gist_id: '',
+
+    // MiMo API
+    mimo_endpoint: 'https://token-plan-cn.xiaomimimo.com/v1/chat/completions',
+    mimo_key: 'tp-cboce5yud85apzsals7ab9iql5wvh8n9xakkb55o2ly892gj',
+    mimo_model: 'MiMo-V2.5'
+};
+
+// 首次加载时，如果 localStorage 里没有配置，自动使用默认值
+function initConfig() {
+    if (!localStorage.getItem('ax_mimo_ep')) {
+        localStorage.setItem('ax_mimo_ep', DEFAULT_CONFIG.mimo_endpoint);
+    }
+    if (!localStorage.getItem('ax_mimo_key')) {
+        localStorage.setItem('ax_mimo_key', DEFAULT_CONFIG.mimo_key);
+    }
+    if (!localStorage.getItem('ax_mimo_model')) {
+        localStorage.setItem('ax_mimo_model', DEFAULT_CONFIG.mimo_model);
+    }
+    if (DEFAULT_CONFIG.github_token && !localStorage.getItem('ax_gh_token')) {
+        localStorage.setItem('ax_gh_token', DEFAULT_CONFIG.github_token);
+    }
+    if (DEFAULT_CONFIG.github_gist_id && !localStorage.getItem('ax_gh_gist_id')) {
+        localStorage.setItem('ax_gh_gist_id', DEFAULT_CONFIG.github_gist_id);
+    }
+}
+
 // ===== 保存MiMo配置 =====
 function saveMimoCfg() {
     var ep = document.getElementById('mimoEndpoint').value.trim();
@@ -1825,7 +1859,7 @@ function loadSample(){var d=initDB();for(var i=0;i<7;i++){var dd=new Date();dd.s
 // ===== INIT =====
 var _savedFS=localStorage.getItem('ax_fs');if(_savedFS)document.documentElement.style.fontSize=_savedFS+'px';
 var _savedFontSetup=localStorage.getItem('ax_font_heading')||localStorage.getItem('ax_font_body')||localStorage.getItem('ax_font_number');if(_savedFontSetup)applyFonts();
-ghInit();renderNav();migrateAreaCats();goPage('dash');if(_gh.ready)ghSyncOnStart();
+ghInit();renderNav();migrateAreaCats();initConfig();goPage('dash');if(_gh.ready)ghSyncOnStart();
 function renderDHist(){var el=document.getElementById('dhArea');if(!el)return;var ym=document.getElementById('dhM')?document.getElementById('dhM').value:curYM();if(!ym)ym=curYM();var reports={};DB.dailyReports.forEach(function(r){if(r.date.startsWith(ym)){reports[parseInt(r.date.split('-')[2])]=r}});var daysInMonth=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1]),0).getDate();var firstDay=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1])-1,1).getDay();firstDay=firstDay===0?6:firstDay-1;var h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';['一','二','三','四','五','六','日'].forEach(function(w){h+='<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">'+w+'</div>'});for(var i=0;i<firstDay;i++)h+='<div></div>';for(var d=1;d<=daysInMonth;d++){var r=reports[d];var isToday=parseInt(td().split('-')[2])===d&&td().startsWith(ym);var has=!!r;h+='<div style="background:'+(has?'var(--card)':'var(--card-h)')+';border:1px solid '+(isToday?'var(--ac)':'var(--bd)')+';border-radius:6px;padding:6px;cursor:'+(has?'pointer':'default')+';min-height:65px"';if(has)h+=' onclick="showDailyModal(\''+r.date+'\')"';h+='><div style="font-size:.72rem;font-weight:600;color:'+(isToday?'var(--ac)':'var(--tx)')+'">'+d+'</div>';if(has)h+='<div style="font-family:var(--fm);font-size:.7rem;color:var(--ac);margin-top:2px">'+fmtC(r.revenue.netSales)+'</div><div style="font-size:.6rem;color:var(--tx-m)">'+r.guest.count+'人</div>';else h+='<div style="font-size:.6rem;color:var(--tx-m);margin-top:4px">-</div>';h+='</div>'}h+='</div>';var mr=getMR(ym);if(mr.length){var mNet=mr.reduce(function(s,r){return s+(r.revenue.netSales||0)},0),mGuests=mr.reduce(function(s,r){return s+(r.guest.count||0)},0);h+='<div class="cards"><div class="card"><div class="card-l">本月实收</div><div class="card-v ac">'+fmtC(mNet)+'</div></div><div class="card"><div class="card-l">已报天数</div><div class="card-v">'+mr.length+'</div></div><div class="card"><div class="card-l">总客流</div><div class="card-v">'+mGuests+'</div></div></div>'}el.innerHTML=h}
 </script>
 <script>
