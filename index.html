@@ -88,7 +88,7 @@ function doImportCode(c){if(!c)return;try{var d=JSON.parse(decodeURIComponent(es
 
 // ===== DATABASE =====
 var STORE='ax_cafe_v8';
-var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{sep:true},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'设置',icon:'⚙️'},{label:'AI',p:'ai',icon:'🤖'}];
+var NAV=[{id:'dash',label:'总览',icon:'📊'},{id:'daily',label:'日报',icon:'📝'},{id:'purchase',label:'采购',icon:'🛒'},{id:'expense',label:'费用',icon:'💰'},{sep:true},{id:'tea',label:'茗茶',icon:'🍵'},{id:'cig',label:'香烟',icon:'🚬'},{id:'alc',label:'酒类',icon:'🍺'},{sep:true},{id:'wh',label:'仓库',icon:'📦'},{sep:true},{id:'damage',label:'报损',icon:'⚠️'},{sep:true},{id:'report',label:'报表',icon:'📈'},{id:'gen',label:'汇报',icon:'📄'},{sep:true},{id:'data',label:'设置',icon:'⚙️'},{id:'ai',label:'AI',icon:'🤖'}];
 function initDB(){return{dailyReports:[],purchases:[],expenses:[],teaItems:[],cigItems:[],alcItems:[],areaCats: {},whItems:[],damageRecords:[]}}
 
 // ========================================
@@ -261,7 +261,7 @@ function getSelVal(selId,customId){var s=document.getElementById(selId);return s
 var curPage='dash';
 function renderNav(){var h='';NAV.forEach(function(n){if(n.sep){h+='<div class="nav-sep"></div>';return}h+='<button class="nav-btn'+(n.id===curPage?' active':'')+'" onclick="goPage(\''+n.id+'\')">'+n.icon+' '+n.label+'</button>'});$id('topNav').innerHTML=h;$id('headerDate').textContent=td();updSyncInd()}
 
-function goPage(p){curPage=p;_curPage=p;renderNav();if(_searchOpen)toggleSearch();if(p==='dash')rDash();if(p==='daily')rDaily();if(p==='purchase')rPurchase();if(p==='expense')rExpense();if(p==='tea')rInv('tea');if(p==='cig')rInv('cig');if(p==='alc')rInv('alc');if(p==='wh')rWH();if(p==='damage')rDamage();if(p==='report')rReport();if(p==='gen')rGen();if(p==='data')rData()}
+function goPage(p){curPage=p;_curPage=p;renderNav();if(_searchOpen)toggleSearch();if(p==='dash')rDash();if(p==='daily')rDaily();if(p==='purchase')rPurchase();if(p==='expense')rExpense();if(p==='tea')rInv('tea');if(p==='cig')rInv('cig');if(p==='alc')rInv('alc');if(p==='wh')rWH();if(p==='damage')rDamage();if(p==='report')rReport();if(p==='gen')rGen();if(p==='data')rData();if(p==='ai')rAI();}
 
 function renderPage(page){page=page||_curPage||'dash';_curPage=page;var fn={'dash':rDash,'daily':rDaily,'purchase':rPurchase,'expense':rExpense,'tea':function(){rInv('tea')},'cig':function(){rInv('cig')},'alc':function(){rInv('alc')},'warehouse':rWH,'damage':rDamage,'report':rReport,'gen':rGen,'data':rData}[page];if(fn)fn();updateNav(page)}
 function updateNav(p){document.querySelectorAll('.nav-item').forEach(function(el){el.classList.toggle('active',el.dataset.page===p)})}
@@ -1973,10 +1973,18 @@ function loadSample(){var d=initDB();for(var i=0;i<7;i++){var dd=new Date();dd.s
 // 9个AI功能的入口
 // ========================================
 function rAI() {
+    // 查询MiMo账户信息
+    checkMimoAccount();
     var h = '';
 
     h += '<div style="margin-bottom:14px;padding:12px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r)">';
     h += '<div style="font-size:.78rem;color:var(--tx-s)">MiMo AI 助手，基于小米MiMo大模型。所有功能需要先在备份页配置API。</div>';
+    h += '</div>';
+    // 账户信息
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">';
+    h += '<div style="font-size:.84rem;font-weight:700;margin-bottom:8px">MiMo 账户信息</div>';
+    h += '<div id="aiAccountInfo"><div style="font-size:.72rem;color:var(--tx-m)">正在查询...</div></div>';
+    h += '<div id="aiUsageInfo" style="margin-top:4px"></div>';
     h += '</div>';
 
     // 第一行：解析类
@@ -2039,6 +2047,79 @@ function rAI() {
     h += '</div>';
 
     setMain('AI 助手', h);
+    function checkMimoAccount() {
+    var ep = localStorage.getItem('ax_mimo_ep');
+    var key = localStorage.getItem('ax_mimo_key');
+    if (!ep || !key) return;
+
+    // MiMo API 地址基础部分（去掉 /chat/completions）
+    var base = ep.replace(/\/chat\/completions\/?$/, '');
+
+    // 尝试获取订阅信息
+    fetch(base + '/subscription', {
+        headers: { 'Authorization': 'Bearer ' + key }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        console.log('订阅信息:', data);
+        var el = document.getElementById('aiAccountInfo');
+        if (!el) return;
+        if (data.error) {
+            el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">账户信息查询暂不可用</div>';
+            return;
+        }
+        var h = '';
+        if (data.hard_limit_usd !== undefined) {
+            h += '<div style="font-size:.78rem">额度上限: $' + data.hard_limit_usd + '</div>';
+        }
+        if (data.access_until) {
+            var d = new Date(data.access_until * 1000);
+            h += '<div style="font-size:.78rem">到期时间: ' + d.toLocaleDateString() + '</div>';
+        }
+        if (data.plan) {
+            h += '<div style="font-size:.78rem">套餐: ' + data.plan.title + '</div>';
+        }
+        if (h) el.innerHTML = h;
+        else el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">暂无订阅信息</div>';
+    })
+    .catch(function() {
+        var el = document.getElementById('aiAccountInfo');
+        if (el) el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">账户信息查询暂不可用</div>';
+    });
+
+    // 尝试获取用量信息（按天）
+    var today = new Date();
+    var thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    var start = thirtyDaysAgo.toISOString().split('T')[0];
+    var end = today.toISOString().split('T')[0];
+
+    fetch(base + '/usage?start_date=' + start + '&end_date=' + end, {
+        headers: { 'Authorization': 'Bearer ' + key }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        console.log('用量信息:', data);
+        var el = document.getElementById('aiUsageInfo');
+        if (!el) return;
+        if (data.error) {
+            el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">用量查询暂不可用</div>';
+            return;
+        }
+        // OpenAI兼容格式：total_usage 单位是美分
+        if (data.total_usage !== undefined) {
+            var usd = (data.total_usage / 100).toFixed(2);
+            el.innerHTML = '<div style="font-size:.78rem">近30天用量: $' + usd + '</div>';
+        }
+        if (data.daily_costs && data.daily_costs.length) {
+            var total = data.daily_costs.reduce(function(s, d) { return s + (d.results[0].n_requests || 0); }, 0);
+            el.innerHTML += '<div style="font-size:.78rem">近30天请求次数: ' + total + '</div>';
+        }
+    })
+    .catch(function() {
+        var el = document.getElementById('aiUsageInfo');
+        if (el) el.innerHTML = '<div style="font-size:.72rem;color:var(--tx-m)">用量查询暂不可用</div>';
+    });
+}
 }
 // ========================================
 // 功能1：智能日报解析
@@ -2628,6 +2709,23 @@ function renderDHist(){var el=document.getElementById('dhArea');if(!el)return;va
 var _chartSrcs=['https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js','https://unpkg.com/chart.js@4.4.0/dist/chart.umd.min.js','https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'];
 function _loadChart(i){if(i>=_chartSrcs.length)return;var s=document.createElement('script');s.src=_chartSrcs[i];s.onload=function(){window._chartLoaded=true};s.onerror=function(){_loadChart(i+1)};document.head.appendChild(s)}
 _loadChart(0);
+// 动态添加AI导航标签
+setTimeout(function() {
+    var nav = document.getElementById('nav');
+    if (!nav || nav.querySelector('[data-page="ai"]')) return;
+    var items = nav.querySelectorAll('.nav-item');
+    if (!items.length) return;
+    var aiItem = items[items.length-1].cloneNode(true);
+    aiItem.setAttribute('data-page', 'ai');
+    aiItem.setAttribute('onclick', "goPage('ai')");
+    var spans = aiItem.querySelectorAll('span');
+    if (spans.length >= 2) {
+        spans[0].textContent = '🤖';
+        spans[1].textContent = 'AI';
+    }
+    nav.appendChild(aiItem);
+}, 1000);
+
 </script>
 </body>
 </html>
