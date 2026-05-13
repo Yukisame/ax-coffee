@@ -1336,7 +1336,7 @@ function doAIParse(){
                 var quality=window.innerWidth<600?0.6:0.85;
                 var base64=canvas.toDataURL('image/jpeg',quality).split(',')[1];
                 console.log('图片压缩: '+w+'x'+h+' 质量:'+quality+' 大小:'+Math.round(base64.length/1024)+'KB');
-                var prompt='请识别这张采购单/出库单图片，提取所有商品信息。\n请严格按以下JSON格式返回，不要有任何其他文字：\n\n{\n  "date": "YYYY-MM-DD",\n  "source": "供应商名称",\n  "items": [\n    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额}\n  ]\n}\n\n注意：qty是发货数量，只返回JSON。';
+                var prompt='请识别这张采购单/出库单图片，提取所有商品信息。\n图片中会标注区域信息（如厨房、吧台、外场），请将每个商品对应的区域填入section字段。\n请严格按以下JSON格式返回，不要有任何其他文字：\n\n{\n  "date": "YYYY-MM-DD",\n  "source": "供应商名称",\n  "items": [\n    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额, "section": "区域"}\n  ]\n}\n\n区域只能是：厨房、吧台、外场。如果无法判断区域，section留空字符串。只返回JSON。';
                 var body={model:localStorage.getItem('ax_mimo_model')||'mimo-v2.5',messages:[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+base64}}]}],max_tokens:4096,temperature:0.1};
                 var ep=localStorage.getItem('ax_mimo_ep');
                 var key=localStorage.getItem('ax_mimo_key');
@@ -1383,12 +1383,12 @@ function doAIParseGo(){
             if(!result.date)result.date=td();
             var src=result.source||'';
             if(/岸香.*贸易|贸易.*岸香/.test(src))src='岸香贸易';
-            else if(!src)src='外购';
+            else if(!src)src='岸香贸易';
             var items=[];
             result.items.forEach(function(item){
                 var qty=parseFloat(item.qty)||0,total=parseFloat(item.total)||0,unitPrice=parseFloat(item.unitPrice)||0;
                 if(!unitPrice&&total>0&&qty>0)unitPrice=Math.round(total/qty*100)/100;
-                if(qty>0&&total>0)items.push({name:item.name||'',section:'',category:'',qty:qty,unit:item.unit||'',unitPrice:unitPrice,total:total,source:src});
+                if(qty>0&&total>0)items.push({name:item.name||'',section:item.section||'',category:'',qty:qty,unit:item.unit||'',unitPrice:unitPrice,total:total,source:src});
             });
             if(!items.length){toast('解析结果为空');return}
             window._mimoResult={date:result.date,source:src,items:items};
@@ -1483,14 +1483,14 @@ function doParsePur() {
     _pmItems = [];
     result.items.forEach(function(item) {
         _pmItems.push({
-            name: item.name,
+            name: item.name || '',
             section: item.section || '',
-            category: item.category || '',
-            qty: item.qty,
+            category: '',
+            qty: qty,
             unit: item.unit || '',
-            unitPrice: item.unitPrice,
-            total: item.total,
-            source: result.source || '外购'
+            unitPrice: unitPrice,
+            total: total,
+            source: src
         });
     });
 
