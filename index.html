@@ -1276,19 +1276,18 @@ function doMimoTextParseGo() {
                 var total = parseFloat(item.total) || 0;
                 var unitPrice = parseFloat(item.unitPrice) || 0;
                 if (!unitPrice && total > 0 && qty > 0) unitPrice = Math.round(total / qty * 100) / 100;
-                if (qty > 0 && total > 0) {
-                    _pmItems.push({
-                        name: item.name || '',
-                        section: '',
-                        category: '',
-                        qty: qty,
-                        unit: item.unit || '',
-                        unitPrice: unitPrice,
-                        total: total,
-                        source: src
-                    });
-                }
+                _pmItems.push({
+                    name: item.name || '',
+                    section: item.section || '',
+                    category: '',
+                    qty: qty,
+                    unit: item.unit || '',
+                    unitPrice: unitPrice,
+                    total: total,
+                    source: result.source || '岸香贸易'
+                });
             });
+
 
             if (!_pmItems.length) { toast('解析结果为空'); return; }
 
@@ -1479,31 +1478,29 @@ function doParsePur() {
     var result = parsePurchase(text);
     if (!result.items.length) { toast('未识别到物品，请检查文字格式'); return; }
 
-    // 填入手动录入表单
-    var qty = parseFloat(item.qty) || 0;
-    var total = parseFloat(item.total) || 0;
-    var unitPrice = parseFloat(item.unitPrice) || 0;
-    if (!unitPrice && total > 0 && qty > 0) unitPrice = Math.round(total / qty * 100) / 100;
+    _pmItems = [];
+    result.items.forEach(function(item) {
+        var qty = parseFloat(item.qty) || 0;
+        var total = parseFloat(item.total) || 0;
+        var unitPrice = parseFloat(item.unitPrice) || 0;
+        if (!unitPrice && total > 0 && qty > 0) unitPrice = Math.round(total / qty * 100) / 100;
         _pmItems.push({
-        name: item.name || '',
-        section: item.section || '',
-        category: '',
-        qty: qty,
-        unit: item.unit || '',
-        unitPrice: unitPrice,
-        total: total,
-        source: result.source || '岸香贸易'
+            name: item.name || '',
+            section: item.section || '',
+            category: '',
+            qty: qty,
+            unit: item.unit || '',
+            unitPrice: unitPrice,
+            total: total,
+            source: result.source || '岸香贸易'
+        });
     });
 
-    // 设置日期和来源
     switchPT('manual');
     setTimeout(function() {
         if ($id('pmDate')) $id('pmDate').value = result.date;
-        if ($id('pmSrc')) {
-            var srcSel = $id('pmSrc');
-            for (var i = 0; i < srcSel.options.length; i++) {
-                if (srcSel.options[i].value === result.source) { srcSel.selectedIndex = i; break; }
-            }
+                if ($id('pmSrc')) {
+            $id('pmSrc').value = '岸香贸易';
         }
         renderPML();
         toast('已识别 ' + _pmItems.length + ' 项物品');
