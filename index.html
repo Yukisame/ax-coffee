@@ -2029,12 +2029,13 @@ function showPurDayModal(date) {
     var total = allItems.reduce(function(s, item) { return s + item.total; }, 0);
     var dateLabel = date.substring(5).replace('-', '/');
 
-    // 标题
     var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
     h += '<h3 style="margin:0">' + dateLabel + ' 采购明细</h3>';
-    h += '<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥' + fmtC(total) + '</span></div>';
+    h += '<div style="display:flex;align-items:center;gap:8px">';
+    h += '<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥' + fmtC(total) + '</span>';
+    h += '<button class="btn s del-btn" onclick="delPurDay(\'' + date + '\')">删除当日</button>';
+    h += '</div></div>';
 
-    // 按区域 > 分类分组
     var secGroups = {};
     allItems.forEach(function(item) {
         var sec = item.section || '未分区';
@@ -2045,7 +2046,6 @@ function showPurDayModal(date) {
         secGroups[sec][cat].total += item.total;
     });
 
-    // 区域总金额
     var secTotals = {};
     Object.keys(secGroups).forEach(function(sec) {
         secTotals[sec] = 0;
@@ -2054,37 +2054,51 @@ function showPurDayModal(date) {
         });
     });
 
-    // 按区域总金额降序
     var secKeys = Object.keys(secGroups).sort(function(a, b) {
         return secTotals[b] - secTotals[a];
     });
 
     h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
 
+    var si = 0;
     secKeys.forEach(function(sec) {
-        // 区域标题
-        h += '<div style="margin-bottom:14px">';
-        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card-h);border:1px solid var(--bd);border-radius:8px;margin-bottom:8px">';
-        h += '<span style="font-size:.88rem;font-weight:700;color:var(--ac)">▸ ' + sec + '</span>';
-        h += '<span style="font-family:var(--fm);font-size:.88rem;font-weight:600">¥' + fmtC(secTotals[sec]) + '</span>';
-        h += '</div>';
+        si++;
+        var secId = 'secBody' + si;
 
-        // 该区域下的分类
+        // 区域标题（可收起）
+        h += '<div style="margin-bottom:14px">';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card-h);border:1px solid var(--bd);border-radius:8px;margin-bottom:8px;cursor:pointer" onclick="toggleSec(\'' + secId + '\')">';
+        h += '<span style="font-size:.88rem;font-weight:700;color:var(--ac)">▸ ' + sec + '</span>';
+        h += '<div style="display:flex;align-items:center;gap:6px">';
+        h += '<span style="font-family:var(--fm);font-size:.88rem;font-weight:600">¥' + fmtC(secTotals[sec]) + '</span>';
+        h += '<button class="btn s del-btn" style="font-size:.65rem;padding:2px 6px" onclick="event.stopPropagation();delPurSec(\'' + date + '\',\'' + sec.replace(/'/g, "\\'") + '\')">删除区域</button>';
+        h += '</div></div>';
+
+        // 区域内容（默认展开）
+        h += '<div id="' + secId + '">';
+
         var catKeys = Object.keys(secGroups[sec]).sort(function(a, b) {
             return secGroups[sec][b].total - secGroups[sec][a].total;
         });
 
+        var ci = 0;
         catKeys.forEach(function(cat) {
+            ci++;
             var group = secGroups[sec][cat];
+            var catId = secId + 'cat' + ci;
 
-            // 分类标题
+            // 分类标题（可收起）
             h += '<div style="margin-left:10px;margin-bottom:8px">';
-            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:4px">';
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:4px;cursor:pointer" onclick="toggleSec(\'' + catId + '\')">';
             h += '<span style="font-size:.75rem;font-weight:600;color:var(--tx)">' + cat + '</span>';
+            h += '<div style="display:flex;align-items:center;gap:4px">';
             h += '<span style="font-family:var(--fm);font-size:.75rem;color:var(--tx-m)">¥' + fmtC(group.total) + '</span>';
-            h += '</div>';
+            h += '<button class="btn s del-btn" style="font-size:.6rem;padding:1px 5px" onclick="event.stopPropagation();delPurCat(\'' + date + '\',\'' + sec.replace(/'/g, "\\'") + '\',\'' + cat.replace(/'/g, "\\'") + '\')">删除分类</button>';
+            h += '</div></div>';
 
-            // 该分类下的物品
+            // 分类内容（默认展开）
+            h += '<div id="' + catId + '">';
+
             group.items.forEach(function(item) {
                 h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;margin-bottom:3px;background:var(--card-h);border:1px solid var(--bd-l);border-radius:6px">';
                 h += '<div style="flex:1;min-width:0">';
@@ -2098,23 +2112,73 @@ function showPurDayModal(date) {
                 h += '</div></div>';
             });
 
-            h += '</div>';
+            h += '</div></div>';
         });
 
-        h += '</div>';
+        h += '</div></div>';
     });
 
     h += '</div>';
-
     h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 600);
+    var mc = document.querySelector('.modal-content');
+    if (mc) { mc.style.height = '75vh'; mc.style.display = 'flex'; mc.style.flexDirection = 'column'; }
+    var sb = mc ? mc.querySelector('[style*="max-height"]') : null;
+    if (sb) { sb.style.flex = '1'; sb.style.overflowY = 'auto'; sb.style.minHeight = '0'; }
+}
+
+}
+
+function toggleSec(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 
-
-function editPurFromModal(date, name) {
+function delPurDay(date) {
+    if (!confirm('确认删除 ' + date + ' 的全部采购记录？')) return;
+    upd(function(db) {
+        db.purchases = db.purchases.filter(function(p) { return p.date !== date; });
+    });
+    toast('已删除当日');
     closeModal();
-    editPurByDate(date, name);
+}
+
+function delPurSec(date, sec) {
+    if (!confirm('确认删除该区域「' + sec + '」的全部物品？')) return;
+    upd(function(db) {
+        db.purchases.forEach(function(p) {
+            if (p.date !== date) return;
+            p.items = p.items.filter(function(item) { return (item.section || '未分区') !== sec; });
+        });
+        db.purchases = db.purchases.filter(function(p) { return p.items.length > 0; });
+    });
+    toast('已删除区域');
+    renderPHist();
+    var remain = DB.purchases.filter(function(p) { return p.date === date; });
+    if (remain.length) showPurDayModal(date);
+    else closeModal();
+}
+
+function delPurCat(date, sec, cat) {
+    if (!confirm('确认删除该分类「' + cat + '」的全部物品？')) return;
+    upd(function(db) {
+        db.purchases.forEach(function(p) {
+            if (p.date !== date) return;
+            p.items = p.items.filter(function(item) {
+                var s = item.section || '未分区';
+                var c = item.category || '未分类';
+                return !(s === sec && c === cat);
+            });
+        });
+        db.purchases = db.purchases.filter(function(p) { return p.items.length > 0; });
+    });
+    toast('已删除分类');
+    renderPHist();
+    var remain = DB.purchases.filter(function(p) { return p.date === date; });
+    if (remain.length) showPurDayModal(date);
+    else closeModal();
 }
 
 function delPurFromModal(date, name) {
@@ -2130,7 +2194,14 @@ function delPurFromModal(date, name) {
     renderPHist();
     var remain = DB.purchases.filter(function(p) { return p.date === date; });
     if (remain.length) showPurDayModal(date);
+    else closeModal();
 }
+
+function editPurFromModal(date, name) {
+    closeModal();
+    editPurByDate(date, name);
+}
+
 
 // ========================================
 // 采购明细弹窗
