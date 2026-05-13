@@ -52,7 +52,6 @@ select{text-align:left!important;text-align-last:left!important;}
     .hrow input[type=date].inp{max-width:150px!important}}
 .del-btn{background:#fff!important;color:var(--rd)!important;border:1px solid var(--rd)!important}
 .del-btn:hover{background:rgba(224,85,85,0.1)!important}
-.hrow .inp[type="month"],.hrow select.inp{min-width:100px!important;flex:1!important}
 
 </style>
 </head>
@@ -168,26 +167,12 @@ function fmtC(n){return(n<0?'-':'')+fmt(Math.abs(n))}
 function fmtP(n){return n.toFixed(1)+'%'}
 function extN(s){var m=s.match(/([\d,]+\.?\d*)/);return m?parseFloat(m[0].replace(/,/g,'')):0}
 function toast(m){var t=$id('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2200)}
-
 function showModal(html, width) {
     var el = document.getElementById('modal');
     var w = width || 420;
-    var t = localStorage.getItem('ax_theme') || '默认深色';
-    var modalBg = {
-        '默认深色': '#0f1114',
-        '泸汀初雪': '#EDE9E3',
-        '远山速影': '#F2EDEA',
-        '桃枝照水': '#F0EBED',
-        '窗纱香灰': '#ECEEF2',
-        '陶碗酒痕': '#EDEEEC',
-        '疏林茶烟': '#F0EBE4'
-    };
     el.innerHTML = '<div class="modal-content" style="max-width:' + w + 'px;width:92vw">' + html + '</div>';
     el.style.display = 'flex';
-    el.style.setProperty('background', modalBg[t] || '#0f1114', 'important');
 }
-
-
 
 function closeModal() {
     document.getElementById('modal').style.display = 'none';
@@ -682,11 +667,12 @@ function hideAILoading(){
     if(window._aiTimerInterval){clearInterval(window._aiTimerInterval);window._aiTimerInterval=null}
     var el=document.getElementById('aiLoadingOverlay');
     if(!el)return;
+    var elapsed=Math.floor((Date.now()-(window._aiStartTime||Date.now()))/1000);
     el.innerHTML='<div style="width:18px;height:18px;border-radius:50%;background:var(--gn);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;flex-shrink:0">✓</div>'
-        +'<div><div style="font-size:.78rem;font-weight:600;color:var(--gn)">分析完成</div></div>';
+        +'<div><div style="font-size:.78rem;font-weight:600;color:var(--gn)">分析完成</div>'
+        +'<div style="font-size:.65rem;color:var(--tx-m)">耗时'+elapsed+'秒 · 结果已保存到历史</div></div>';
     setTimeout(function(){var e=document.getElementById('aiLoadingOverlay');if(e)e.remove()},2000);
 }
-
 
 // ========================================
 // 保存AI分析记录
@@ -2008,79 +1994,83 @@ function showPurDayModal(date) {
     h += '<h3 style="margin:0">' + dateLabel + ' 采购明细</h3>';
     h += '<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥' + fmtC(total) + '</span></div>';
 
-    // 按 来源 > 区域 > 分类 分组
-    var grouped = {};
+    // 按区域 > 分类分组
+    var secGroups = {};
     allItems.forEach(function(item) {
-        if (!grouped[item.source]) grouped[item.source] = {};
-        if (!grouped[item.source][item.section]) grouped[item.source][item.section] = {};
-        if (!grouped[item.source][item.section][item.category]) grouped[item.source][item.section][item.category] = [];
-        grouped[item.source][item.section][item.category].push(item);
+        var sec = item.section || '未分区';
+        var cat = item.category || '未分类';
+        if (!secGroups[sec]) secGroups[sec] = {};
+        if (!secGroups[sec][cat]) secGroups[sec][cat] = { items: [], total: 0 };
+        secGroups[sec][cat].items.push(item);
+        secGroups[sec][cat].total += item.total;
+    });
+
+    // 区域总金额
+    var secTotals = {};
+    Object.keys(secGroups).forEach(function(sec) {
+        secTotals[sec] = 0;
+        Object.keys(secGroups[sec]).forEach(function(cat) {
+            secTotals[sec] += secGroups[sec][cat].total;
+        });
+    });
+
+    // 按区域总金额降序
+    var secKeys = Object.keys(secGroups).sort(function(a, b) {
+        return secTotals[b] - secTotals[a];
     });
 
     h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
 
-    // 遍历来源
-    Object.keys(grouped).forEach(function(src) {
-        var srcTotal = 0;
-        Object.keys(grouped[src]).forEach(function(sec) {
-            Object.keys(grouped[src][sec]).forEach(function(cat) {
-                grouped[src][sec][cat].forEach(function(it) { srcTotal += it.total; });
-            });
+    secKeys.forEach(function(sec) {
+        // 区域标题
+        h += '<div style="margin-bottom:14px">';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--card-h);border:1px solid var(--bd);border-radius:8px;margin-bottom:8px">';
+        h += '<span style="font-size:.88rem;font-weight:700;color:var(--ac)">▸ ' + sec + '</span>';
+        h += '<span style="font-family:var(--fm);font-size:.88rem;font-weight:600">¥' + fmtC(secTotals[sec]) + '</span>';
+        h += '</div>';
+
+        // 该区域下的分类
+        var catKeys = Object.keys(secGroups[sec]).sort(function(a, b) {
+            return secGroups[sec][b].total - secGroups[sec][a].total;
         });
 
-        // 来源标题
-        h += '<div style="margin-bottom:12px">';
-        h += '<div style="font-size:.84rem;font-weight:700;color:var(--ac);padding:6px 0;border-bottom:1px solid var(--bd);margin-bottom:6px">';
-        h += src + ' <span style="font-family:var(--fm);font-weight:400;color:var(--tx-m)">¥' + fmtC(srcTotal) + '</span></div>';
+        catKeys.forEach(function(cat) {
+            var group = secGroups[sec][cat];
 
-        // 遍历区域
-        Object.keys(grouped[src]).forEach(function(sec) {
-            var secTotal = 0;
-            Object.keys(grouped[src][sec]).forEach(function(cat) {
-                grouped[src][sec][cat].forEach(function(it) { secTotal += it.total; });
-            });
-
+            // 分类标题
             h += '<div style="margin-left:10px;margin-bottom:8px">';
-            h += '<div style="font-size:.78rem;font-weight:600;color:var(--tx);padding:3px 0">';
-            h += '▸ ' + sec + ' <span style="font-family:var(--fm);font-weight:400;font-size:.72rem;color:var(--tx-m)">¥' + fmtC(secTotal) + '</span></div>';
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:4px">';
+            h += '<span style="font-size:.75rem;font-weight:600;color:var(--tx)">' + cat + '</span>';
+            h += '<span style="font-family:var(--fm);font-size:.75rem;color:var(--tx-m)">¥' + fmtC(group.total) + '</span>';
+            h += '</div>';
 
-            // 遍历分类
-            Object.keys(grouped[src][sec]).forEach(function(cat) {
-                var items = grouped[src][sec][cat];
-                var catTotal = items.reduce(function(s, it) { return s + it.total; }, 0);
-
-                h += '<div style="margin-left:14px;margin-bottom:6px">';
-                h += '<div style="font-size:.72rem;color:var(--tx-s);padding:2px 0">';
-                h += cat + ' <span style="font-family:var(--fm);color:var(--tx-m)">¥' + fmtC(catTotal) + '</span></div>';
-
-                // 每个物品
-                items.forEach(function(item) {
-                    h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;margin-bottom:3px;background:var(--card-h);border:1px solid var(--bd-l);border-radius:6px">';
-                    h += '<div style="flex:1;min-width:0">';
-                    h += '<div style="font-size:.78rem;font-weight:600">' + item.name + '</div>';
-                    h += '<div style="font-size:.65rem;color:var(--tx-s)">' + item.qty + (item.unit || '') + ' × ¥' + fmt(item.unitPrice) + '</div>';
-                    h += '</div>';
-                    h += '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">';
-                    h += '<span style="font-size:.82rem;font-weight:700;color:var(--ac)">¥' + fmtC(item.total) + '</span>';
-                    h += '<button class="btn s" style="font-size:.65rem;padding:2px 6px" onclick="editPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">编</button>';
-                    h += '<button class="btn s del-btn" style="font-size:.65rem;padding:2px 6px" onclick="delPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">删</button>';
-                    h += '</div></div>';
-                });
-
-                h += '</div>'; // 分类
+            // 该分类下的物品
+            group.items.forEach(function(item) {
+                h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;margin-bottom:3px;background:var(--card-h);border:1px solid var(--bd-l);border-radius:6px">';
+                h += '<div style="flex:1;min-width:0">';
+                h += '<div style="font-size:.78rem;font-weight:600">' + item.name + '</div>';
+                h += '<div style="font-size:.65rem;color:var(--tx-s)">' + item.qty + (item.unit || '') + ' × ¥' + fmt(item.unitPrice) + '</div>';
+                h += '</div>';
+                h += '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">';
+                h += '<span style="font-size:.82rem;font-weight:700;color:var(--ac)">¥' + fmtC(item.total) + '</span>';
+                h += '<button class="btn s" style="font-size:.65rem;padding:2px 6px" onclick="editPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">编</button>';
+                h += '<button class="btn s del-btn" style="font-size:.65rem;padding:2px 6px" onclick="delPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">删</button>';
+                h += '</div></div>';
             });
 
-            h += '</div>'; // 区域
+            h += '</div>';
         });
 
-        h += '</div>'; // 来源
+        h += '</div>';
     });
 
-    h += '</div>'; // 滚动区
+    h += '</div>';
 
     h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 600);
 }
+
+
 
 function editPurFromModal(date, name) {
     closeModal();
@@ -3524,76 +3514,67 @@ function applyTheme(){
     var existing=document.getElementById('axThemeStyle');
     if(existing)existing.remove();
 
-    var themes = {
-        '默认深色': {
-            bg: '#0f1114', card: '#1a1d23', cardH: '#22262e',
-            bd: '#2a2e36', bdL: '#333840',
-            ac: '#d4a853', tx: '#e8e4dc', txM: '#7a766e', txS: '#5a5850',
-            gn: '#4caf7d', rd: '#e05555', og: '#e8a035',
-            btnBg: '#2a2e36', btnTx: '#e8e4dc', inputBg: '#22262e', inputBd: '#333840',
-            navBg: '#1a1d23', navActive: '#22262e', modalBg: '#0f1114',
-            thBg: '#22262e', scrollbar: '#333840'
+    var themes={
+        '默认深色':{
+            bg:'#0f1114',card:'#1a1d23',cardH:'#22262e',
+            bd:'#2a2e36',bdL:'#333840',
+            ac:'#d4a853',tx:'#e8e4dc',txM:'#7a766e',txS:'#5a5850',
+            gn:'#4caf7d',rd:'#e05555',og:'#e8a035',
+            btnBg:'#2a2e36',btnTx:'#e8e4dc',inputBg:'#22262e',inputBd:'#333840',
+            navBg:'#1a1d23',navActive:'#22262e',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#22262e',scrollbar:'#333840'
         },
-        '泸汀初雪': {
-            bg: '#EDE9E3', card: '#F7F4EF', cardH: '#EBE7E1',
-            bd: '#D2C4B2', bdL: '#C8BBAB',
-            ac: '#A1C1A1', tx: '#3A3530', txM: '#8A7E74', txS: '#A89E94',
-            gn: '#8BA995', rd: '#C85555', og: '#C8963C',
-            btnBg: '#D2C4B2', btnTx: '#3A3530', inputBg: '#F7F4EF', inputBd: '#D2C4B2',
-            navBg: '#EBE7E1', navActive: '#A1C1A1', modalBg: '#EDE9E3',
-            thBg: '#EBE7E1', scrollbar: '#C8BBAB'
+        '经典棕色':{
+            bg:'#1c1814',card:'#282320',cardH:'#322c28',
+            bd:'#3d3632',bdL:'#4a423c',
+            ac:'#c8956c',tx:'#e8ddd4',txM:'#8a7e74',txS:'#6a6058',
+            gn:'#6aad6a',rd:'#c85555',og:'#c8956c',
+            btnBg:'#3d3632',btnTx:'#e8ddd4',inputBg:'#322c28',inputBd:'#4a423c',
+            navBg:'#282320',navActive:'#322c28',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#322c28',scrollbar:'#4a423c'
         },
-        '远山速影': {
-            bg: '#F2EDEA', card: '#FAF7F3', cardH: '#F0ECE8',
-            bd: '#D8C9BA', bdL: '#CCBFB0',
-            ac: '#A8BEDF', tx: '#3A3835', txM: '#8A8478', txS: '#A8A298',
-            gn: '#7BAA90', rd: '#C85555', og: '#C8963C',
-            btnBg: '#D8C9BA', btnTx: '#3A3835', inputBg: '#FAF7F3', inputBd: '#D8C9BA',
-            navBg: '#F0ECE8', navActive: '#A8BEDF', modalBg: '#F2EDEA',
-            thBg: '#F0ECE8', scrollbar: '#CCBFB0'
+        '极简白':{
+            bg:'#f5f5f5',card:'#ffffff',cardH:'#f0f0f0',
+            bd:'#e0e0e0',bdL:'#d0d0d0',
+            ac:'#333333',tx:'#222222',txM:'#888888',txS:'#aaaaaa',
+            gn:'#2e8b57',rd:'#cc3333',og:'#cc8800',
+            btnBg:'#e8e8e8',btnTx:'#222222',inputBg:'#ffffff',inputBd:'#d0d0d0',
+            navBg:'#ffffff',navActive:'#f0f0f0',modalBg:'rgba(0,0,0,0.4)',
+            thBg:'#f0f0f0',scrollbar:'#cccccc'
         },
-        '桃枝照水': {
-            bg: '#F0EBED', card: '#F8F5F6', cardH: '#EDE7E9',
-            bd: '#D4C4C8', bdL: '#C8B8BC',
-            ac: '#E6A6AC', tx: '#3A3235', txM: '#8A7A7E', txS: '#A89A9E',
-            gn: '#7BB88A', rd: '#C85555', og: '#C8963C',
-            btnBg: '#E6CDD0', btnTx: '#3A3235', inputBg: '#F8F5F6', inputBd: '#D4C4C8',
-            navBg: '#EDE7E9', navActive: '#E6A6AC', modalBg: '#F0EBED',
-            thBg: '#EDE7E9', scrollbar: '#C8B8BC'
+        '森林绿':{
+            bg:'#0d1410',card:'#162018',cardH:'#1e2a22',
+            bd:'#283830',bdL:'#324238',
+            ac:'#5aad6a',tx:'#d8e8dc',txM:'#6a8a70',txS:'#4a6a50',
+            gn:'#5aad6a',rd:'#c85555',og:'#b8a040',
+            btnBg:'#283830',btnTx:'#d8e8dc',inputBg:'#1e2a22',inputBd:'#324238',
+            navBg:'#162018',navActive:'#1e2a22',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#1e2a22',scrollbar:'#324238'
         },
-        '窗纱香灰': {
-            bg: '#ECEEF2', card: '#F5F6F8', cardH: '#E8EAF0',
-            bd: '#D0D4DC', bdL: '#C4C8D2',
-            ac: '#B6A9C8', tx: '#33353A', txM: '#787A82', txS: '#9A9CA4',
-            gn: '#7BAA9A', rd: '#C85555', og: '#C8963C',
-            btnBg: '#D0D4DC', btnTx: '#33353A', inputBg: '#F5F6F8', inputBd: '#D0D4DC',
-            navBg: '#E8EAF0', navActive: '#B6A9C8', modalBg: '#ECEEF2',
-            thBg: '#E8EAF0', scrollbar: '#C4C8D2'
+        '星空蓝':{
+            bg:'#0d1117',card:'#161b22',cardH:'#1c2333',
+            bd:'#2a3040',bdL:'#343e50',
+            ac:'#58a6ff',tx:'#d8dee8',txM:'#6a7a8e',txS:'#4a5a6e',
+            gn:'#3fb950',rd:'#f85149',og:'#d29922',
+            btnBg:'#2a3040',btnTx:'#d8dee8',inputBg:'#1c2333',inputBd:'#343e50',
+            navBg:'#161b22',navActive:'#1c2333',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#1c2333',scrollbar:'#343e50'
         },
-        '陶碗酒痕': {
-            bg: '#EDEEEC', card: '#F5F5F4', cardH: '#EBECEB',
-            bd: '#CFD4D2', bdL: '#C0C8C6',
-            ac: '#99B6B4', tx: '#353835', txM: '#7A7E7A', txS: '#9A9E9A',
-            gn: '#7BAA88', rd: '#D48982', og: '#D4A060',
-            btnBg: '#CFD4D2', btnTx: '#353835', inputBg: '#F5F5F4', inputBd: '#CFD4D2',
-            navBg: '#EBECEB', navActive: '#99B6B4', modalBg: '#EDEEEC',
-            thBg: '#EBECEB', scrollbar: '#C0C8C6'
-        },
-        '疏林茶烟': {
-            bg: '#F0EBE4', card: '#F8F5F0', cardH: '#EDE8E2',
-            bd: '#D8CCC0', bdL: '#CCC0B4',
-            ac: '#CBAF98', tx: '#3A3530', txM: '#8A7E74', txS: '#A89E94',
-            gn: '#7BAA88', rd: '#C85555', og: '#C8963C',
-            btnBg: '#D8CCC0', btnTx: '#3A3530', inputBg: '#F8F5F0', inputBd: '#D8CCC0',
-            navBg: '#EDE8E2', navActive: '#CBAF98', modalBg: '#F0EBE4',
-            thBg: '#EDE8E2', scrollbar: '#CCC0B4'
+        '玫瑰粉':{
+            bg:'#181014',card:'#221820',cardH:'#2c2028',
+            bd:'#3a2834',bdL:'#483040',
+            ac:'#d4739a',tx:'#e8d8e0',txM:'#8a6a78',txS:'#6a4a58',
+            gn:'#6aad6a',rd:'#d45050',og:'#d49050',
+            btnBg:'#3a2834',btnTx:'#e8d8e0',inputBg:'#2c2028',inputBd:'#483040',
+            navBg:'#221820',navActive:'#2c2028',modalBg:'rgba(0,0,0,0.7)',
+            thBg:'#2c2028',scrollbar:'#483040'
         }
     };
-
 
     var t=themes[name]||themes['默认深色'];
     var root=document.documentElement;
 
+    // 设置CSS变量
     root.style.setProperty('--bg',t.bg);
     root.style.setProperty('--card',t.card);
     root.style.setProperty('--card-h',t.cardH);
@@ -3607,19 +3588,12 @@ function applyTheme(){
     root.style.setProperty('--rd',t.rd);
     root.style.setProperty('--og',t.og);
 
-    // 判断是否浅色主题（主色亮度高时文字用深色）
-    var acR=parseInt(t.ac.substr(1,2),16);
-    var acG=parseInt(t.ac.substr(3,2),16);
-    var acB=parseInt(t.ac.substr(5,2),16);
-    var acLum=acR*0.299+acG*0.587+acB*0.114;
-    var isLight=acLum>160;
-
-
+    // 注入覆盖样式
     var css=[
         'body{background:'+t.bg+'!important;color:'+t.tx+'!important}',
         '.top-nav{background:'+t.navBg+'!important;border-color:'+t.bd+'!important}',
         '.nav-btn{color:'+t.txM+'!important;background:transparent!important}',
-        '.nav-btn.active{background:'+t.navActive+'!important;color:'+(isLight?'#333':'#fff')+'!important;text-shadow:'+(isLight?'none':'0 1px 3px rgba(0,0,0,0.25)')+'!important}',
+        '.nav-btn.active{color:'+t.ac+'!important;background:'+t.navActive+'!important}',
         '.nav-btn:hover{background:'+t.cardH+'!important}',
         '#main,#mainContent{background:'+t.bg+'!important;color:'+t.tx+'!important}',
         '.card{background:'+t.card+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
@@ -3628,7 +3602,7 @@ function applyTheme(){
         'select.inp,input.inp,textarea.inp{background:'+t.inputBg+'!important;border-color:'+t.inputBd+'!important;color:'+t.tx+'!important}',
         'select.inp option{background:'+t.card+'!important;color:'+t.tx+'!important}',
         '.btn{background:'+t.btnBg+'!important;color:'+t.btnTx+'!important;border-color:'+t.bd+'!important}',
-        '.btn.p{background:'+t.ac+'!important;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,0.25)!important;border:none!important}',
+        '.btn.p{background:'+t.ac+'!important;color:#fff!important;border:none!important}',
         '.btn.g{background:'+t.gn+'!important;color:#fff!important;border:none!important}',
         '.btn.d{background:'+t.rd+'!important;color:#fff!important;border:none!important}',
         '.btn.s{background:'+t.cardH+'!important;color:'+t.txM+'!important;border:1px solid '+t.bd+'!important}',
@@ -3640,13 +3614,14 @@ function applyTheme(){
         '.pur-folder{background:transparent!important}',
         '.pur-hdr{background:'+t.cardH+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
         '.pur-body{border-color:'+t.bdL+'!important}',
+        '.modal{background:'+t.modalBg+'!important}',
         '.modal-content{background:'+t.card+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
         '.badge{background:'+t.cardH+'!important;color:'+t.txM+'!important;border:1px solid '+t.bd+'!important}',
         '.badge.gn{background:'+t.gn+'!important;color:#fff!important;border:none!important}',
         '.badge.rd{background:'+t.rd+'!important;color:#fff!important;border:none!important}',
         '.badge.og{background:'+t.og+'!important;color:#fff!important;border:none!important}',
         '.tab-btn{background:'+t.cardH+'!important;color:'+t.txM+'!important;border-color:'+t.bd+'!important}',
-        '.tab-btn.active{background:'+t.ac+'!important;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,0.25)!important}',
+        '.tab-btn.active{background:'+t.ac+'!important;color:#fff!important}',
         '.alert-bar{background:'+t.cardH+'!important;border-color:'+t.og+'!important}',
         '.totals-bar .card{background:'+t.card+'!important;border-color:'+t.bd+'!important}',
         'h3,h4{color:'+t.tx+'!important}',
@@ -3662,12 +3637,6 @@ function applyTheme(){
         '.brow{background:transparent!important}',
         'a{color:'+t.ac+'!important}',
         '#headerDate{color:'+t.txM+'!important}',
-        '.hrow{flex-wrap:nowrap!important}',
-        '.hrow label{white-space:nowrap!important;flex-shrink:0!important}',
-        '.hrow select.inp,.hrow input.inp{flex:1!important;min-width:0!important;max-width:none!important;width:auto!important}',
-        'select{text-align:left!important;text-align-last:left!important}',
-        '.del-btn{background:'+t.card+'!important;color:'+t.rd+'!important;border:1px solid '+t.rd+'!important}',
-        '.del-btn:hover{background:rgba(200,85,85,0.1)!important}',
         '::-webkit-scrollbar{width:6px}',
         '::-webkit-scrollbar-track{background:'+t.bg+'}',
         '::-webkit-scrollbar-thumb{background:'+t.scrollbar+';border-radius:3px}'
@@ -3678,7 +3647,6 @@ function applyTheme(){
     style.textContent=css;
     document.head.appendChild(style);
 }
-
 
 
 // ========================================
@@ -3767,20 +3735,12 @@ function applySpacing(){
         root.style.setProperty('--sp-l','16px');
     }
 }
-
-function rData(){
-var h='',v;
-
-var curH=localStorage.getItem('ax_font_heading')||'';
-var curB=localStorage.getItem('ax_font_body')||'';
-var curN=localStorage.getItem('ax_font_number')||'';
-var curFS=localStorage.getItem('ax_fs')||'13.5';
-
+function rData(){var curH=localStorage.getItem('ax_font_heading')||'',curB=localStorage.getItem('ax_font_body')||'',curN=localStorage.getItem('ax_font_number')||'',curFS=localStorage.getItem('ax_fs')||'13.5';
 h+='<div class="sec">显示设置</div>';
 h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 
 // 第1行：主题风格 + 字体大小
-h+='<div class="hrow" style="margin-bottom:10px">';
+h+='<div class="hrow" style="margin-bottom:8px">';
 h+='<label>主题风格</label>';
 h+='<select class="inp" onchange="setTheme(this.value)">';
 var themes=['默认深色','泸汀初雪','远山速影','桃枝照水','窗纱香灰','陶碗酒痕','疏林茶烟'];
@@ -3796,34 +3756,39 @@ h+='</select>';
 h+='</div>';
 
 // 第2行：标题字体 + 正文字体 + 数字字体
-h+='<div class="hrow" style="margin-bottom:10px">';
-h+='<label>标题字体</label>';
+h+='<div class="hrow" style="margin-bottom:8px">';
+h+='<label>标题</label>';
 h+='<select class="inp" onchange="setFontSetting(\'heading\',this.value)">';
 var headingFonts=[
-    {v:'',l:'默认 Playfair Display'},{v:'noto-serif',l:'思源宋体'},{v:'noto-sans',l:'思源黑体'},
-    {v:'dm-serif',l:'DM Serif'},{v:'syne',l:'Syne'},{v:'bebas',l:'Bebas Neue'},
-    {v:'instrument',l:'Instrument Serif'},{v:'playfair',l:'Playfair Display'},
-    {v:'cormorant',l:'Cormorant Garamond'},{v:'lxgw-serif',l:'霞鹜文楷'}
+    {v:'',l:'默认'},{v:'noto-serif',l:'思源宋体'},{v:'noto-sans',l:'思源黑体'},
+    {v:'dm-serif',l:'DM Serif'},{v:'syne',l:'Syne'},{v:'bebas',l:'Bebas'},
+    {v:'instrument',l:'Instrument'},{v:'playfair',l:'Playfair'},{v:'cormorant',l:'Cormorant'},
+    {v:'lxgw-serif',l:'霞鹜文楷'},{v:'cinzel',l:'Cinzel'},{v:'merriweather',l:'Merriweather'},
+    {v:'raleway',l:'Raleway'},{v:'ma-shan',l:'毛笔楷'},{v:'zcool-xiaowei',l:'站酷小薇'},
+    {v:'zcool-kuaile',l:'站酷快乐'},{v:'long-cang',l:'龙藏体'},{v:'liu-jian',l:'流江毛草'},
+    {v:'zhi-mang',l:'志莽行书'},{v:'unifraktur',l:'哥特体'}
 ];
 var curH=localStorage.getItem('ax_font_heading')||'';
 headingFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curH===f.v?' selected':'')+'>'+f.l+'</option>'});
 h+='</select>';
-h+='<label>正文字体</label>';
+h+='<label>正文</label>';
 h+='<select class="inp" onchange="setFontSetting(\'body\',this.value)">';
 var bodyFonts=[
-    {v:'',l:'默认思源宋体'},{v:'noto-sans',l:'思源黑体'},{v:'lxgw-wenkai',l:'霞鹜文楷'},
-    {v:'source-serif',l:'Source Serif'},{v:'crimson',l:'Crimson Pro'},
-    {v:'lora',l:'Lora'},{v:'dm-sans',l:'DM Sans'}
+    {v:'',l:'默认'},{v:'noto-sans',l:'思源黑体'},{v:'lxgw-wenkai',l:'霞鹜文楷'},
+    {v:'source-serif',l:'Source Serif'},{v:'crimson',l:'Crimson'},{v:'lora',l:'Lora'},
+    {v:'dm-sans',l:'DM Sans'},{v:'merriweather',l:'Merriweather'},{v:'raleway',l:'Raleway'},
+    {v:'long-cang',l:'龙藏体'},{v:'ma-shan',l:'毛笔楷'}
 ];
 var curB=localStorage.getItem('ax_font_body')||'';
 bodyFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curB===f.v?' selected':'')+'>'+f.l+'</option>'});
 h+='</select>';
-h+='<label>数字字体</label>';
+h+='<label>数字</label>';
 h+='<select class="inp" onchange="setFontSetting(\'number\',this.value)">';
 var numberFonts=[
-    {v:'',l:'默认等宽'},{v:'dm-mono',l:'DM Mono'},{v:'lexend',l:'Lexend'},
-    {v:'noto-sans',l:'黑体数字'},{v:'courier',l:'Courier New'},
-    {v:'jetbrains',l:'JetBrains Mono'},{v:'fira',l:'Fira Code'},{v:'ibm-plex',l:'IBM Plex Mono'}
+    {v:'',l:'默认'},{v:'dm-mono',l:'DM Mono'},{v:'lexend',l:'Lexend'},
+    {v:'noto-sans',l:'黑体'},{v:'courier',l:'Courier'},{v:'jetbrains',l:'JetBrains'},
+    {v:'fira',l:'Fira Code'},{v:'ibm-plex',l:'IBM Plex'},{v:'bebas',l:'Bebas'},
+    {v:'cinzel',l:'Cinzel'}
 ];
 var curN=localStorage.getItem('ax_font_number')||'';
 numberFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curN===f.v?' selected':'')+'>'+f.l+'</option>'});
@@ -3832,13 +3797,13 @@ h+='</div>';
 
 // 第3行：圆角大小 + 页面间距
 h+='<div class="hrow">';
-h+='<label>圆角大小</label>';
+h+='<label>圆角</label>';
 h+='<select class="inp" onchange="setRadius(this.value)">';
 var radiuses=[{v:'6',l:'小 6px'},{v:'10',l:'中 10px'},{v:'14',l:'大 14px'},{v:'20',l:'圆润 20px'}];
 var curR=localStorage.getItem('ax_radius')||'10';
 radiuses.forEach(function(r){h+='<option value="'+r.v+'"'+(curR===r.v?' selected':'')+'>'+r.l+'</option>'});
 h+='</select>';
-h+='<label>页面间距</label>';
+h+='<label>间距</label>';
 h+='<select class="inp" onchange="setSpacing(this.value)">';
 var spacings=[{v:'compact',l:'紧凑'},{v:'normal',l:'标准'},{v:'loose',l:'宽松'}];
 var curS=localStorage.getItem('ax_spacing')||'normal';
@@ -3848,17 +3813,17 @@ h+='</div>';
 
 h+='</div>';
 
-h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 
+h += '<div class="sec">MiMo配置</div>';
 h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 h += '<p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px">用于采购单拍照识别，接入小米MiMo视觉API</p>';
+
 h += '<div class="hrow"><label>API地址</label><input class="inp" id="mimoEndpoint" style="flex:2" placeholder="https://api.mimo.com/v1/chat/completions" value="' + (localStorage.getItem('ax_mimo_ep') || '') + '"></div>';
 h += '<div class="hrow"><label>API Key</label><input class="inp" id="mimoKey" style="flex:2" placeholder="sk-xxxx" value="' + (localStorage.getItem('ax_mimo_key') || '') + '"></div>';
 h+='<div class="hrow"><label>模型</label><select class="inp" id="mimoModel" style="max-width:200px">';var mimoModels=['mimo-v2.5','mimo-v2.5-pro','mimo-v2.5-tts-voiceclone','mimo-v2.5-tts-voicedesign','mimo-v2.5-tts','mimo-v2-pro','mimo-v2-omni','mimo-v2-tts'];var curModel=localStorage.getItem('ax_mimo_model')||'mimo-V2.5-Pro';mimoModels.forEach(function(m){h+='<option'+(curModel===m?' selected':'')+'>'+m+'</option>'});h+='</select></div>';
 h += '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="saveMimoCfg()">保存配置</button></div>';
 h += '</div>';
 h+='<div class="sec">GitHub 同步</div>';if(!_gh.ready){h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><h4 style="font-size:.84rem;margin-bottom:8px">设置同步</h4><p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--ac)">创建Token</a> → 勾选 gist</p><div class="hrow"><input class="inp" id="ghTK" placeholder="ghp_xxxx..."></div><div class="brow" style="margin-top:8px"><button class="btn p" onclick="ghSetToken(document.getElementById(\'ghTK\').value)">连接</button></div></div>'}else{h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><p style="font-size:.74rem;color:var(--gn)">已连接 · Gist: '+(_gh.gistId||'创建中')+'</p><div class="brow"><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button><button class="btn d s" onclick="ghDisconnect()">断开</button></div></div>'}h+='<div class="sec">数据码</div><div class="brow"><button class="btn" onclick="genSyncCode()">生成</button><button class="btn" onclick="importSyncCode()">导入</button></div>';h+='<div class="sec">设置</div><div class="cards"><div class="card"><div class="card-l">日报</div><div class="card-v">'+DB.dailyReports.length+'</div></div><div class="card"><div class="card-l">采购</div><div class="card-v">'+DB.purchases.length+'</div></div><div class="card"><div class="card-l">费用</div><div class="card-v">'+DB.expenses.length+'</div></div><div class="card"><div class="card-l">仓库</div><div class="card-v">'+(DB.whItems||[]).length+'</div></div></div><div class="brow"><button class="btn" onclick="expJSON()">导出JSON</button><input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)"><button class="btn" onclick="document.getElementById(\'impF\').click()">导入</button></div>';h+='<div class="sec">示例</div><div class="brow"><button class="btn" onclick="loadSample()">加载示例</button></div><div class="sec" style="color:var(--rd)">危险</div><div class="brow"><button class="btn d" onclick="if(confirm(\'清空？\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';setMain('设置',h)}
-
 function expJSON(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}));a.download='岸香咖啡_'+td()+'.json';a.click();toast('已导出')}
 function impJSON(event){var f=event.target.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(e){try{DB=JSON.parse(e.target.result);saveDB(DB);ghScheduleSave();toast('已导入');rData()}catch(err){toast('失败')}};reader.readAsText(f);event.target.value=''}
 function loadSample(){var d=initDB();for(var i=0;i<7;i++){var dd=new Date();dd.setDate(dd.getDate()-i);var ds=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');var net=3200+Math.round(Math.random()*1200);d.dailyReports.push({date:ds,revenue:{grossSales:net+300,discount:Math.round(Math.random()*300),netSales:net,kitchenSales:Math.round(net*.65),barSales:Math.round(net*.25),cigarette:{total:100+Math.round(Math.random()*200),items:{金皖:Math.round(Math.random()*10)}},other:Math.round(Math.random()*150),otherItems:{}},payment:{pos:Math.round(net*.7),ccbLife:0,cash:Math.round(net*.05),memberCard:Math.round(net*.1),ar:{total:0,meituan:0,douyin:0},treat:0},delivery:{total:Math.round(Math.random()*700),meituan:Math.round(Math.random()*400),taobao:0,jd:0},guest:{count:35+Math.round(Math.random()*25),avgSpend:0,premiumRoomsToday:0},rooms:[],premiumRooms:{today:0},teaSales:{},cigSales:{},alcSales:{},reporter:'示例'})}d.cigItems=[{id:'cig_1',name:'黄山（金皖）',costPerUnit:24,pricePerUnit:28,openingStock:30,restockAlert:15,purchaseUnit:'条',purchaseConvRatio:10,purchases:[],sales:[]}];d.alcItems=[{id:'alc_1',name:'百威啤酒',costPerUnit:6,pricePerUnit:15,openingStock:48,restockAlert:10,purchaseUnit:'箱',purchaseConvRatio:24,purchases:[],sales:[]}];d.whItems=[{id:'wh_1',name:'一次性手套',category:'包装',unit:'箱',stock:5,safeStock:2,movements:[]},{id:'wh_2',name:'吸管',category:'包装',unit:'包',stock:20,safeStock:10,movements:[]},{id:'wh_3',name:'柠檬汁',category:'调料',unit:'瓶',stock:2,safeStock:1,movements:[]},{id:'wh_6',name:'打包盒',category:'包装',unit:'箱',stock:3,safeStock:5,movements:[]}];d.expenses=[{id:'e_1',date:'2026-05-01',category:'水电煤',amount:2800,note:'',photoFile:''}];d.purchases=[{id:'p_1',date:'2026-05-01',source:'岸香贸易',items:[{name:'古越龙山500ML绍兴花雕酒',section:'厨房',category:'调料/粮油',qty:1,unit:'件',unitPrice:69,total:69,source:'岸香贸易'},{name:'中盐500G精制食盐',section:'厨房',category:'调料/粮油',qty:1,unit:'件',unitPrice:46,total:46,source:'岸香贸易'},{name:'赢鸿5L菜籽油',section:'厨房',category:'调料/粮油',qty:2,unit:'桶',unitPrice:87.20,total:174.40,source:'岸香贸易'},{name:'凤珠暖2.5KG雪花生粉',section:'厨房',category:'调料/粮油',qty:1,unit:'袋',unitPrice:28.64,total:28.64,source:'岸香贸易'},{name:'海麟娃108G什锦蔬菜干',section:'吧台',category:'其他',qty:1,unit:'件',unitPrice:179.92,total:179.92,source:'岸香贸易'}]},{id:'p_2',date:'2026-05-03',source:'岸香贸易',items:[{name:'古越龙山500ML绍兴花雕酒',section:'厨房',category:'调料/粮油',qty:2,unit:'件',unitPrice:72,total:144,source:'岸香贸易'},{name:'赢鸿5L菜籽油',section:'厨房',category:'调料/粮油',qty:1,unit:'桶',unitPrice:89.50,total:89.50,source:'岸香贸易'}]}];d.damageRecords=[];DB=d;saveDB(DB);ghScheduleSave();toast('已加载');rData()}
@@ -4432,7 +4397,6 @@ function aiAskQuestion() {
 }
 
 // ===== INIT =====
-applyTheme();
 var _savedFS=localStorage.getItem('ax_fs');if(_savedFS)document.documentElement.style.fontSize=_savedFS+'px';
 var _savedFontSetup=localStorage.getItem('ax_font_heading')||localStorage.getItem('ax_font_body')||localStorage.getItem('ax_font_number');if(_savedFontSetup)applyFonts();
 ghInit();renderNav();migrateAreaCats();initConfig();goPage('ai');if(_gh.ready)ghSyncOnStart();
@@ -4451,6 +4415,8 @@ setTimeout(function() {
     if (!items.length) return;
     var aiItem = items[items.length-1].cloneNode(true);
     aiItem.setAttribute('data-page', 'ai');
+    applyTheme();
+    applyFonts();
     var savedFS=localStorage.getItem('ax_fs');if(savedFS)document.documentElement.style.fontSize=savedFS+'px';
     var savedR=localStorage.getItem('ax_radius');if(savedR)document.documentElement.style.setProperty('--r',savedR+'px');
     applySpacing();
