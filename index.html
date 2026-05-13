@@ -1373,6 +1373,20 @@ function doAIParseGo(){
             });
             if(!items.length){toast('解析结果为空');return}
             window._mimoResult={date:result.date,source:src,items:items};
+            _pmItems=items.slice();
+            switchPT('manual');
+            setTimeout(function(){
+                if(result.date&&$id('pmDate'))$id('pmDate').value=result.date;
+                if($id('pmSrc')){
+                    var srcSel=$id('pmSrc');
+                    for(var i=0;i<srcSel.options.length;i++){
+                        if(srcSel.options[i].value===src){srcSel.selectedIndex=i;break}
+                    }
+                }
+                renderPML();
+                toast('已识别 '+items.length+' 项物品');
+            },100);
+
             showMimoConfirm();
         }catch(e){toast('解析失败');console.error(e)}
     };
