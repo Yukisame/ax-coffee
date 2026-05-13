@@ -1289,7 +1289,16 @@ function doMimoTextParseGo() {
 
         } catch (e) { toast('解析失败'); console.error(e); }
     };
-    xhr.onerror = function() { hideAILoading(); toast('请求失败'); };
+    xhr.onerror=function(){
+        hideAILoading();
+        var info='请求失败\nURL:'+ep+'\n设备:'+(/Mobile|Android|iPhone/i.test(navigator.userAgent)?'手机':'电脑')+'\n协议:'+location.protocol;
+        var d=document.createElement('div');
+        d.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.9);color:#fff;padding:20px;font-size:13px;white-space:pre-wrap;word-break:break-all;overflow:auto';
+        d.textContent=info;
+        d.onclick=function(){d.remove()};
+        document.body.appendChild(d);
+    };
+
     xhr.ontimeout = function() { hideAILoading(); toast('请求超时'); };
     xhr.send(JSON.stringify(body));
 }
