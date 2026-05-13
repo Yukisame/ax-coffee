@@ -40,7 +40,6 @@ textarea,.inp{background:var(--sf);border:1px solid var(--bd);border-radius:6px;
 .totals-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .pm-edit{background:var(--sf);border:1px solid var(--bd);border-radius:4px;font-size:.74rem;padding:4px 6px;width:100%;min-width:50px}.pm-edit:focus{border-color:var(--ac);outline:none}
 .tag-btns{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;align-items:center}.tag-btn{padding:3px 10px;border-radius:12px;border:1px solid var(--bd);background:var(--card-h);color:var(--tx-s);font-family:var(--fb);font-size:.72rem;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.tag-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--card)}
-@media(max-width:600px){.cards{grid-template-columns:repeat(2,1fr)}.card-v{font-size:.95rem}.main{padding:16px 14px 40px}.hrow{flex-direction:column;gap:6px}.hrow .inp,.hrow label{width:100%;text-align:left;min-width:auto}.hrow label{padding-right:0}}
 @keyframes aiSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 select{text-align:left!important;text-align-last:left!important;}
 .hrow{align-items:center!important;justify-content:flex-start!important}
@@ -50,8 +49,10 @@ select{text-align:left!important;text-align-last:left!important;}
     .hrow label{margin-left:8px!important;flex-shrink:0;white-space:nowrap}
     .hrow .inp,.hrow select.inp{flex:none!important;width:auto!important;min-width:0;text-align:left!important;text-align-last:left!important}
     .hrow select.inp{max-width:110px!important}
-    .hrow input[type=date].inp{max-width:150px!important}
-}
+    .hrow input[type=date].inp{max-width:150px!important}}
+.del-btn{background:#fff!important;color:var(--rd)!important;border:1px solid var(--rd)!important}
+.del-btn:hover{background:rgba(224,85,85,0.1)!important}
+
 </style>
 </head>
 <body>
@@ -1665,211 +1666,91 @@ function delPurSec(date,sec){if(!confirm('删除 '+date+' '+sec+' 全部？'))re
 // 功能：按月查看采购，日历显示有采购的日期
 // 点击日期展开当天明细
 // ========================================
-function renderPHist() {
+function renderPHist(){
+    var el=document.getElementById('pHistArea');
+    if(!el)return;
+    var ym=document.getElementById('pHistM')?document.getElementById('pHistM').value:curYM();
+    if(!ym)ym=curYM();
 
-    // ===== 第1步：获取元素和月份 =====
-    // el 是显示内容的目标区域
-    var el = document.getElementById('pHistArea');
-    if (!el) return;
+    var year=parseInt(ym.split('-')[0]);
+    var month=parseInt(ym.split('-')[1]);
+    var daysInMonth=new Date(year,month,0).getDate();
+    var firstDay=new Date(year,month-1,1).getDay();
+    firstDay=firstDay===0?6:firstDay-1;
+    var todayStr=td();
+    var todayDay=parseInt(todayStr.split('-')[2]);
+    var isThisMonth=todayStr.startsWith(ym);
 
-    // ym = 当前选中的月份，格式如 "2026-05"
-    var ym = document.getElementById('pHistM')
-        ? document.getElementById('pHistM').value
-        : curYM();  // curYM() 返回当前年月
-    if (!ym) ym = curYM();
-
-    // ===== 第2步：筛选本月采购数据 =====
-    // 从 DB.purchases 中找出日期以 ym 开头的记录
-    // 例如 ym="2026-05"，则匹配 "2026-05-01", "2026-05-12" 等
-    // .sort() 按日期升序排列（早的在前）
-    var pur = DB.purchases.filter(function(p) {
-        return p.date.startsWith(ym);
-    }).sort(function(a, b) {
-        return a.date.localeCompare(b.date);
+    var dayTotals={};
+    var grandTotal=0;
+    var srcTotals={};
+    DB.purchases.filter(function(p){return p.date.startsWith(ym)}).forEach(function(p){
+        p.items.forEach(function(item){
+            var day=parseInt(p.date.substring(8,10));
+            if(!dayTotals[day])dayTotals[day]=0;
+            dayTotals[day]+=item.total;
+            grandTotal+=item.total;
+            var src=item.source||p.source||'外购';
+            if(!srcTotals[src])srcTotals[src]=0;
+            srcTotals[src]+=item.total;
+        });
     });
 
-    // 如果本月没有采购记录，显示提示
-    if (!pur.length) {
-        el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx-m)">本月暂无记录</div>';
-        return;
+    var h='';
+
+    // 顶部卡片
+    if(grandTotal>0){
+        h+='<div class="cards">';
+        h+='<div class="card"><div class="card-l">本月采购</div><div class="card-v ac">'+fmtC(grandTotal)+'</div></div>';
+        h+='<div class="card"><div class="card-l">天数</div><div class="card-v">'+Object.keys(dayTotals).length+'</div></div>';
+        h+='<div class="card"><div class="card-l">日均</div><div class="card-v">'+fmtC(grandTotal/daysInMonth)+'</div></div>';
+        h+='</div>';
+
+        // 来源标签
+        h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">';
+        Object.keys(srcTotals).forEach(function(src){
+            h+='<span class="badge">'+src+' '+fmtC(srcTotals[src])+'</span>';
+        });
+        h+='</div>';
     }
 
-    // ===== 第3步：按来源统计各区域金额 =====
-    // srcAreaTotals 的结构：
-    // {
-    //   "岸香贸易": { total: 10500, "厨房": 6200, "吧台": 3100, "外场": 1200 },
-    //   "外购":     { total: 1845,  "厨房": 1200, "吧台": 445,  "外场": 200 }
-    // }
-    var grandTotal = 0;     // 所有来源的总金额
-    var dayData = {};        // 按日期分组的数据，用于日历
-    var srcAreaTotals = {};  // 按来源分组的区域统计
-
-    pur.forEach(function(p) {
-        // 初始化这个日期的数据容器
-        if (!dayData[p.date]) dayData[p.date] = {};
-
-        // 遍历这张采购单的每个物品
-        p.items.forEach(function(item) {
-            var src = item.source || p.source || '外购';    // 来源
-            var area = item.section || '其他';               // 区域（厨房/吧台/外场）
-            var cat = item.category || '未分类';             // 分类
-
-            // 初始化嵌套结构
-            if (!dayData[p.date][src]) dayData[p.date][src] = {};
-            if (!dayData[p.date][src][area]) dayData[p.date][src][area] = {};
-            if (!dayData[p.date][src][area][cat]) dayData[p.date][src][area][cat] = [];
-
-            // 把物品放进对应的 日期 > 来源 > 区域 > 分类 下
-            dayData[p.date][src][area][cat].push(item);
-
-            // 累加总金额
-            grandTotal += item.total;
-
-            // 累加来源-区域统计
-            if (!srcAreaTotals[src]) srcAreaTotals[src] = { total: 0 };
-            srcAreaTotals[src].total += item.total;
-            if (!srcAreaTotals[src][area]) srcAreaTotals[src][area] = 0;
-            srcAreaTotals[src][area] += item.total;
-        });
+    // 日历
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+    ['一','二','三','四','五','六','日'].forEach(function(w){
+        h+='<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">'+w+'</div>';
     });
 
-    // ===== 第4步：构建 HTML =====
-    var h = '';
+    for(var ix=0;ix<firstDay;ix++)h+='<div></div>';
 
-    // --- 4a. 顶部统计卡片 ---
-    // 4张卡片：采购合计、采购天数、岸香贸易、外购
-    // 如果有多个来源会自动显示
-    var dates = Object.keys(dayData).sort();
-    h += '<div class="cards">';
-    h += '<div class="card"><div class="card-l">本月采购合计</div>';
-    h += '<div class="card-v ac">' + fmtC(grandTotal) + '</div></div>';
-    h += '<div class="card"><div class="card-l">采购天数</div>';
-    h += '<div class="card-v">' + dates.length + '</div></div>';
-    h += '</div>';
+    for(var d=1;d<=daysInMonth;d++){
+        var dateStr=ym+'-'+(d<10?'0'+d:d);
+        var has=!!dayTotals[d];
+        var isToday=isThisMonth&&d===todayDay;
 
-    // --- 4b. 来源分区域统计卡片 ---
-    // 按固定顺序排列来源：岸香贸易 > 外购 > 其他
-    var srcOrder = [];
-    if (srcAreaTotals['岸香贸易']) srcOrder.push('岸香贸易');
-    if (srcAreaTotals['外购']) srcOrder.push('外购');
-    // 把不在预设里的来源追加到后面
-    Object.keys(srcAreaTotals).forEach(function(s) {
-        if (srcOrder.indexOf(s) < 0) srcOrder.push(s);
-    });
+        var bg=has?'var(--card)':'var(--card-h)';
+        var border=isToday?'2px solid var(--ac)':'1px solid var(--bd)';
+        var cur=has?'pointer':'default';
 
-    var allAreas = ['厨房', '吧台', '外场', '其他'];
+        h+='<div style="background:'+bg+';border:'+border+';border-radius:6px;padding:5px 4px;min-height:52px;cursor:'+cur+'"';
+        if(has)h+=' onclick="showPurDayModal(\''+dateStr+'\')"';
+        h+='><div style="font-size:.7rem;font-weight:600;color:'+(isToday?'var(--ac)':'var(--tx)')+'">'+d+'</div>';
 
-    srcOrder.forEach(function(src) {
-        var sd = srcAreaTotals[src];  // 这个来源的统计数据
-        h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">';
-        // 来源名称 + 总金额
-        h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-        h += '<span style="font-size:.84rem;font-weight:700;color:var(--ac)">' + src + '</span>';
-        h += '<span style="font-family:var(--fm);font-size:.88rem;font-weight:600">' + fmtC(sd.total) + '</span>';
-        h += '</div>';
-        // 各区域小卡片（网格布局）
-        h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">';
-        allAreas.forEach(function(area) {
-            var v = sd[area] || 0;
-            if (v > 0 || sd.total > 0) {
-                h += '<div style="background:var(--card-h);border:1px solid var(--bd-l);border-radius:6px;padding:8px;text-align:center">';
-                h += '<div style="font-size:.65rem;color:var(--tx-m);margin-bottom:3px">' + area + '</div>';
-                h += '<div style="font-family:var(--fm);font-size:.82rem;font-weight:600;color:' + (v > 0 ? 'var(--tx)' : 'var(--tx-m)') + '">' + fmtC(v) + '</div>';
-                h += '</div>';
-            }
-        });
-        h += '</div></div>';
-    });
-
-    // ===== 第5步：日历视图 =====
-    // 解析年月，计算这个月有多少天、第一天是周几
-    var year = parseInt(ym.split('-')[0]);
-    var month = parseInt(ym.split('-')[1]);
-    var daysInMonth = new Date(year, month, 0).getDate();  // 这个月的天数
-    var firstDay = new Date(year, month - 1, 1).getDay();   // 第一天是周几（0=周日）
-    firstDay = firstDay === 0 ? 6 : firstDay - 1;           // 转成 周一=0 周日=6
-
-    // 计算每天的采购总金额（用于日历上显示）
-    var dayTotals = {};
-    dates.forEach(function(date) {
-        var d = parseInt(date.split('-')[2]);  // 取日期的"日"部分
-        var t = 0;
-        Object.keys(dayData[date]).forEach(function(src) {
-            Object.keys(dayData[date][src]).forEach(function(area) {
-                Object.keys(dayData[date][src][area]).forEach(function(cat) {
-                    dayData[date][src][area][cat].forEach(function(it) {
-                        t += it.total;
-                    });
-                });
-            });
-        });
-        dayTotals[d] = t;
-    });
-
-    // 今天的日期（用于高亮）
-    var todayStr = td();
-    var todayDay = parseInt(todayStr.split('-')[2]);
-    var isThisMonth = todayStr.startsWith(ym);
-
-    // 渲染日历
-    h += '<div style="margin-top:14px;margin-bottom:14px">';
-    h += '<div style="font-size:.84rem;font-weight:700;color:var(--ac);margin-bottom:10px">采购日历</div>';
-
-    // 星期标题行
-    h += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
-    var weekDays = ['一', '二', '三', '四', '五', '六', '日'];
-    weekDays.forEach(function(w) {
-        h += '<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">' + w + '</div>';
-    });
-
-    // 前面的空白格（月初不是周一时需要补位）
-    for (var i = 0; i < firstDay; i++) {
-        h += '<div></div>';
-    }
-
-    // 每一天的格子
-    for (var d = 1; d <= daysInMonth; d++) {
-        var hasPur = !!dayTotals[d];           // 这天有没有采购
-        var isToday = isThisMonth && d === todayDay;  // 是不是今天
-        var dateStr = ym + '-' + String(d).padStart(2, '0');  // 完整日期字符串
-
-        // 格子样式
-        var bg = hasPur ? 'var(--card)' : 'var(--card-h)';
-        var border = isToday ? '2px solid var(--ac)' : '1px solid var(--bd)';
-        var cursor = hasPur ? 'pointer' : 'default';
-
-        h += '<div style="background:' + bg + ';border:' + border + ';border-radius:6px;padding:5px 4px;min-height:52px;cursor:' + cursor + '"';
-
-        // 如果有采购，点击展开当天明细
-        if (hasPur) {
-            h += ' onclick="showPurDay(' + "'" + dateStr + "'" + ')"';
+        if(has){
+            h+='<div style="font-family:var(--fm);font-size:.65rem;color:var(--ac);margin-top:2px">';
+            if(dayTotals[d]>=10000)h+=(dayTotals[d]/10000).toFixed(1)+'万';
+            else if(dayTotals[d]>=1000)h+=(dayTotals[d]/1000).toFixed(1)+'k';
+            else h+='¥'+dayTotals[d].toFixed(0);
+            h+='</div>';
         }
-        h += '>';
+        h+='</div>';
+    }
+    h+='</div>';
 
-        // 日期数字
-        h += '<div style="font-size:.7rem;font-weight:600;color:' + (isToday ? 'var(--ac)' : 'var(--tx)') + '">' + d + '</div>';
-
-        // 如果有采购，显示金额
-        if (hasPur) {
-            h += '<div style="font-family:var(--fm);font-size:.65rem;color:var(--ac);margin-top:2px">';
-            // 如果金额超过1万，简写
-            if (dayTotals[d] >= 10000) {
-                h += (dayTotals[d] / 10000).toFixed(1) + '万';
-            } else if (dayTotals[d] >= 1000) {
-                h += (dayTotals[d] / 1000).toFixed(1) + 'k';
-            } else {
-                h += '¥' + dayTotals[d].toFixed(0);
-            }
-            h += '</div>';
-        }
-
-        h += '</div>';
+    if(!grandTotal){
+        h+='<div style="text-align:center;padding:20px;color:var(--tx-m);font-size:.78rem">本月暂无采购记录</div>';
     }
 
-    h += '</div></div>';
-
-    // 输出到页面
-    el.innerHTML = h;
+    el.innerHTML=h;
 }
 
 // ========================================
@@ -2242,7 +2123,7 @@ function showDailyModal(date) {
     // --- 按钮：保存 / 删除 / 关闭 ---
     h += '<div class="brow" style="margin-top:12px">';
     h += '<button class="btn p" onclick="saveDailyModal(' + sq(date) + ')">保存</button>';
-    h += '<button class="btn d" onclick="delDailyFromModal(' + sq(date) + ')">删除</button>';
+    h += '<button class="btn del-btn" onclick="delDailyFromModal(' + sq(date) + ')">删除</button>';
     h += '<button class="btn" onclick="closeModal()">关闭</button>';
     h += '</div>';
 
@@ -2349,7 +2230,226 @@ function delPurByIdx(pid,idx){var p=DB.purchases.find(function(pp){return pp.id=
 // ===== EXPENSE =====
 var _editExpId=null;
 function getExpCats(){var c={};DB.expenses.forEach(function(e){if(e.category)c[e.category]=1});return Object.keys(c).length?Object.keys(c):['水电煤','物业费','工资','维修费','其他']}
-function rExpense(){var cats=getExpCats();var h='<div class="section-label">录入费用</div><div class="hrow"><label>日期</label><input class="inp" id="expDate" type="date" value="'+td()+'" style="max-width:150px"><label>分类</label><select class="inp" id="expCatSel" style="max-width:120px" onchange="toggleCustomInput(this,\'expCatC\')"><option value="">请选择</option>';cats.forEach(function(c){h+='<option>'+c+'</option>'});h+='<option value="__custom">自定义</option></select><input class="inp" id="expCatC" style="display:none;max-width:120px" placeholder="输入分类"><label>金额</label><input class="inp" id="expAmt" type="number" step="0.01" style="max-width:100px">元</div>';h+='<div class="hrow"><label>备注</label><input class="inp" id="expNote"></div><div class="hrow"><label>凭证</label><input type="file" id="expPhoto" accept="image/*" onchange="handleExpPhoto(event)"></div>';h+='<div class="brow"><button class="btn p" onclick="addExp()">添加</button></div>';h+='<div class="sec" style="margin-top:20px">历史</div>';DB.expenses.slice().sort(function(a,b){return b.date.localeCompare(a.date)}).forEach(function(e){h+='<div class="item-card"><span class="name">'+e.date+' · '+e.category+'</span><div class="nums">'+(e.photoFile?'<span class="badge gn">📷</span>':'')+'<b>'+fmtC(e.amount)+'</b><button class="btn s" onclick="editExp(\''+e.id+'\')">编</button><button class="btn s d" onclick="delExp(\''+e.id+'\')">×</button></div></div>'});setMain('费用',h)}
+function rExpense(){
+    var cats=getExpCats();
+    var h='';
+
+    // 标签栏
+    h+='<div class="tab-bar" id="expTabs">';
+    h+='<button class="tab-btn active" onclick="switchExpTab(\'input\')">录入</button>';
+    h+='<button class="tab-btn" onclick="switchExpTab(\'detail\')">明细</button>';
+    h+='</div>';
+
+    // 录入页
+    h+='<div id="expInput">';
+    h+='<div class="section-label">录入费用</div>';
+    h+='<div class="hrow"><label>日期</label><input class="inp" id="expDate" type="date" value="'+td()+'" style="max-width:150px">';
+    h+='<label>分类</label><select class="inp" id="expCatSel" style="max-width:120px" onchange="toggleCustomInput(this,\'expCatC\')">';
+    h+='<option value="">请选择</option>';
+    cats.forEach(function(c){h+='<option>'+c+'</option>'});
+    h+='<option value="__custom">自定义</option></select>';
+    h+='<input class="inp" id="expCatC" style="display:none;max-width:120px" placeholder="输入分类">';
+    h+='<label>金额</label><input class="inp" id="expAmt" type="number" step="0.01" style="max-width:100px">元</div>';
+    h+='<div class="hrow"><label>备注</label><input class="inp" id="expNote"></div>';
+    h+='<div class="hrow"><label>凭证</label><input type="file" id="expPhoto" accept="image/*" onchange="handleExpPhoto(event)"></div>';
+    h+='<div class="brow"><button class="btn p" onclick="addExp()">添加</button></div>';
+    h+='</div>';
+
+    // 明细页：日历
+    h+='<div id="expDetail" style="display:none">';
+    h+=renderExpCalendar();
+    h+='</div>';
+
+    setMain('费用',h);
+}
+
+// 切换标签
+function switchExpTab(tab){
+    document.getElementById('expInput').style.display=tab==='input'?'':'none';
+    document.getElementById('expDetail').style.display=tab==='detail'?'':'none';
+    var btns=document.querySelectorAll('#expTabs .tab-btn');
+    btns[0].className='tab-btn'+(tab==='input'?' active':'');
+    btns[1].className='tab-btn'+(tab==='detail'?' active':'');
+    if(tab==='detail'){
+        document.getElementById('expDetail').innerHTML=renderExpCalendar();
+    }
+}
+
+// ========================================
+// 费用日历
+// ========================================
+var _expCalYM=curYM(); // 当前显示的年月
+
+function renderExpCalendar(){
+    var ym=_expCalYM;
+    var year=parseInt(ym.split('-')[0]);
+    var month=parseInt(ym.split('-')[1]);
+
+    var monthItems=DB.expenses.filter(function(e){return e.date.startsWith(ym)});
+    var monthTotal=monthItems.reduce(function(s,e){return s+e.amount},0);
+
+    var dayData={};
+    monthItems.forEach(function(e){
+        var day=parseInt(e.date.substring(8,10));
+        if(!dayData[day])dayData[day]=0;
+        dayData[day]+=e.amount;
+    });
+
+    var catTotals={};
+    monthItems.forEach(function(e){
+        if(!catTotals[e.category])catTotals[e.category]=0;
+        catTotals[e.category]+=e.amount;
+    });
+
+    var todayDay=parseInt(td().split('-')[2]);
+    var isThisMonth=td().startsWith(ym);
+
+    var h='';
+
+    // 月份切换
+    h+='<div class="hrow" style="margin-bottom:10px">';
+    h+='<button class="btn s" onclick="expCalNav(-1)">◀ 上月</button>';
+    h+='<span style="font-size:.88rem;font-weight:700;flex:1;text-align:center">'+year+'年'+month+'月</span>';
+    h+='<button class="btn s" onclick="expCalNav(1)">下月 ▶</button></div>';
+
+    // 日历网格（和日报一样的样式）
+    var firstDay=new Date(year,month-1,1).getDay();
+    firstDay=firstDay===0?6:firstDay-1;
+    var daysInMonth=new Date(year,month,0).getDate();
+
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';
+    ['一','二','三','四','五','六','日'].forEach(function(w){
+        h+='<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">'+w+'</div>';
+    });
+
+    for(var i=0;i<firstDay;i++)h+='<div></div>';
+
+    for(var d=1;d<=daysInMonth;d++){
+        var dateStr=ym+'-'+(d<10?'0'+d:d);
+        var isToday=isThisMonth&&d===todayDay;
+        var has=!!dayData[d];
+
+        h+='<div style="background:'+(has?'var(--card)':'var(--card-h)')+';border:1px solid '+(isToday?'var(--ac)':'var(--bd)')+';border-radius:6px;padding:6px;cursor:'+(has?'pointer':'default')+';min-height:65px"';
+
+        if(has)h+=' onclick="expDayClick(\''+dateStr+'\')"';
+
+        h+='><div style="font-size:.72rem;font-weight:600;color:'+(isToday?'var(--ac)':'var(--tx)')+'">'+d+'</div>';
+
+        if(has){
+            h+='<div style="font-family:var(--fm);font-size:.7rem;color:var(--ac);margin-top:2px">¥'+fmtC(dayData[d])+'</div>';
+        }else{
+            h+='<div style="font-size:.6rem;color:var(--tx-m);margin-top:4px">-</div>';
+        }
+        h+='</div>';
+    }
+    h+='</div>';
+
+    // 底部：本月汇总（和日报一样用cards）
+    if(monthItems.length){
+        h+='<div class="cards">';
+        h+='<div class="card"><div class="card-l">本月费用</div><div class="card-v ac">'+fmtC(monthTotal)+'</div></div>';
+        h+='<div class="card"><div class="card-l">笔数</div><div class="card-v">'+monthItems.length+'</div></div>';
+        h+='<div class="card"><div class="card-l">日均</div><div class="card-v">'+fmtC(monthTotal/daysInMonth)+'</div></div>';
+        h+='</div>';
+
+        // 分类标签
+        h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:10px">';
+        Object.keys(catTotals).sort(function(a,b){return catTotals[b]-catTotals[a]}).forEach(function(cat){
+            h+='<span class="badge">'+cat+' '+fmtC(catTotals[cat])+'</span>';
+        });
+        h+='</div>';
+    }else{
+        h+='<div style="text-align:center;padding:20px;color:var(--tx-m);font-size:.78rem">本月暂无费用记录</div>';
+    }
+
+    return h;
+}
+
+// 月份导航
+function expCalNav(dir){
+    var parts=_expCalYM.split('-');
+    var y=parseInt(parts[0]),m=parseInt(parts[1])+dir;
+    if(m<1){m=12;y--}if(m>12){m=1;y++}
+    _expCalYM=y+'-'+(m<10?'0'+m:''+m);
+    document.getElementById('expDetail').innerHTML=renderExpCalendar();
+}
+
+// 点击日期格子
+function expDayClick(dateStr){
+    var items=DB.expenses.filter(function(e){return e.date===dateStr});
+    if(!items.length){toast('这天没有费用记录');return}
+    showExpDayModal(dateStr,items);
+}
+
+// 某天费用弹窗
+function showExpDayModal(date,items){
+    var total=items.reduce(function(s,e){return s+e.amount},0);
+    var dateLabel=date.substring(5).replace('-','/') || date;
+
+    var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    h+='<h3 style="margin:0">'+dateLabel+' 费用明细</h3>';
+    h+='<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥'+fmtC(total)+'</span></div>';
+
+    // 分类汇总
+    var catTotals={};
+    items.forEach(function(e){
+        if(!catTotals[e.category])catTotals[e.category]=0;
+        catTotals[e.category]+=e.amount;
+    });
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+    Object.keys(catTotals).forEach(function(cat){
+        h+='<span class="badge">'+cat+' '+fmtC(catTotals[cat])+'</span>';
+    });
+    h+='</div>';
+
+    // 逐笔
+    h+='<div style="max-height:50vh;overflow-y:auto;padding-right:4px">';
+    items.forEach(function(e){
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin-bottom:6px;background:var(--card-h);border:1px solid var(--bd);border-radius:8px">';
+
+        h+='<div style="flex:1;min-width:0">';
+        h+='<div style="font-size:.84rem;font-weight:600">'+e.category+'</div>';
+        if(e.note)h+='<div style="font-size:.72rem;color:var(--tx-m);margin-top:2px">'+e.note+'</div>';
+        if(e.photoFile)h+='<span class="badge gn" style="margin-top:4px;display:inline-block">📷</span>';
+        h+='</div>';
+
+        h+='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">';
+        h+='<span style="font-size:.88rem;font-weight:700;color:var(--ac)">¥'+fmtC(e.amount)+'</span>';
+        h+=' <button class="btn s" onclick="editExpFromCal(\''+e.id+'\',\''+date+'\')">编</button>';
+        h+=' <button class="btn s del-btn" onclick="delExpFromCal(\''+e.id+'\',\''+date+'\')">删</button>';
+        h+='</div>';
+
+        h+='</div>';
+    });
+    h+='</div>';
+
+    h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+
+    showModal(h,550);
+}
+
+// 从弹窗编辑
+function editExpFromCal(id,date){
+    closeModal();
+    editExp(id);
+}
+
+// 从弹窗删除
+function delExpFromCal(id,date){
+    if(!confirm('确认删除这笔费用？'))return;
+    upd(function(db){db.expenses=db.expenses.filter(function(e){return e.id!==id})});
+    toast('已删除');
+    closeModal();
+    // 刷新弹窗
+    var items=DB.expenses.filter(function(e){return e.date===date});
+    if(items.length){
+        showExpDayModal(date,items);
+    }else{
+        // 刷新日历
+        document.getElementById('expDetail').innerHTML=renderExpCalendar();
+    }
+}
+
 function addExp(){var amt=parseFloat($id('expAmt').value),cat=getSelVal('expCatSel','expCatC');if(!amt||!cat){toast('填分类和金额');return}upd(function(db){db.expenses.push({id:'e_'+Date.now(),date:$id('expDate').value||td(),category:cat,amount:amt,note:$id('expNote').value.trim(),photoFile:_expPhotoData||''})});_expPhotoData=null;toast('已添加');rExpense()}
 function editExp(id){var e=DB.expenses.find(function(e){return e.id===id});if(!e)return;_editExpId=id;var cats=getExpCats();var h='<h3>编辑费用</h3>';h+='<div class="hrow"><label>日期</label><input class="inp" id="eeDate" type="date" value="'+e.date+'" style="max-width:150px"><label>分类</label><select class="inp" id="eeCat" style="max-width:120px">';cats.forEach(function(c){h+='<option'+(e.category===c?' selected':'')+'>'+c+'</option>'});h+='</select></div>';h+='<div class="hrow"><label>金额</label><input class="inp" id="eeAmt" type="number" step="0.01" value="'+e.amount+'" style="max-width:100px"><label>备注</label><input class="inp" id="eeNote" value="'+(e.note||'')+'"></div>';h+='<div class="brow" style="margin-top:12px"><button class="btn p" onclick="doEditExp()">保存</button><button class="btn" onclick="closeModal()">取消</button></div>';showModal(h)}
 function doEditExp(){if(!_editExpId)return;upd(function(db){var e=db.expenses.find(function(e){return e.id===_editExpId});if(!e)return;e.date=document.getElementById('eeDate').value;e.category=document.getElementById('eeCat').value;e.amount=parseFloat(document.getElementById('eeAmt').value)||0;e.note=document.getElementById('eeNote').value.trim()});closeModal();_editExpId=null;toast('已更新');rExpense()}
@@ -2359,7 +2459,117 @@ function delExp(id){if(!confirm('删除？'))return;upd(function(db){db.expenses
 var INV={tea:{label:'茗茶',key:'teaItems'},cig:{label:'香烟',key:'cigItems'},alc:{label:'酒类',key:'alcItems'}};
 function rInv(type){var items=DB[INV[type].key]||[];var ym=curYM();var unit=type==='cig'?'包':type==='alc'?'瓶':'';var stats=[];items.forEach(function(item){var sales=item.sales.filter(function(s){return s.date.startsWith(ym)});var c=invCalc(item,type);var mc=invCalcMon(item,type,ym);var cups=0,pots=0,qty=0,expected=0;sales.forEach(function(s){cups+=(s.cups||0);pots+=(s.pots||0);qty+=(s.qty||0);if(type==='tea')expected+=(s.cups||0)*(item.pricePerCup||0)+(s.pots||0)*(item.pricePerPot||0);else expected+=(s.qty||0)*(item.pricePerUnit||0)});stats.push({item:item,stock:c.stock,cups:cups,pots:pots,qty:qty,expected:expected,actual:mc.actual,cost:mc.cost,profit:mc.actual-mc.cost})});var tE=stats.reduce(function(s,st){return s+st.expected},0),tA=stats.reduce(function(s,st){return s+st.actual},0),tC=stats.reduce(function(s,st){return s+st.cost},0),tP=tA-tC;var h='<div class="cards">';h+='<div class="card"><div class="card-l">品类</div><div class="card-v ac">'+items.length+'</div></div>';h+='<div class="card"><div class="card-l">应收</div><div class="card-v">'+fmtC(tE)+'</div></div>';h+='<div class="card"><div class="card-l">实收</div><div class="card-v gn">'+fmtC(tA)+'</div></div>';h+='<div class="card"><div class="card-l">成本</div><div class="card-v rd">'+fmtC(tC)+'</div></div>';h+='<div class="card"><div class="card-l">毛利</div><div class="card-v ac">'+fmtC(tP)+'</div></div>';h+='<div class="card"><div class="card-l">毛利率</div><div class="card-v">'+(tA>0?fmtP(tP/tA*100):'0%')+'</div></div></div>';h+='<div class="tab-bar" id="invT"><button class="tab-btn active" onclick="switchInvT(\'stock\',\''+type+'\')">库存</button><button class="tab-btn" onclick="switchInvT(\'hist\',\''+type+'\')">明细</button></div>';h+='<div id="invStock">';h+='<div class="brow" style="margin-bottom:14px"><button class="btn" onclick="showAddInv(\''+type+'\')">+添加</button> <button class="btn" onclick="invMoveAll(\''+type+'\',1)">入库</button> <button class="btn" onclick="invMoveAll(\''+type+'\',-1)">销售</button></div>';if(items.length){h+='<div class="tw"><table>';if(type==='tea'){h+='<tr><th>品名</th><th>期初</th><th>单价/杯</th><th>销售(杯)</th><th>销售(壶)</th><th>应收</th><th>实收</th><th>毛利</th><th>操作</th></tr>';stats.forEach(function(st){h+='<tr data-inv="'+type+'_'+st.item.id+'"><td>'+st.item.name+'</td><td class="nr">'+st.stock+'克</td><td class="nr">'+fmt(st.item.pricePerCup||0)+'</td><td class="nr">'+st.cups+'</td><td class="nr">'+st.pots+'</td><td class="nr">'+fmtC(st.expected)+'</td><td class="nr" style="color:var(--gn)">'+fmtC(st.actual)+'</td><td class="nr" style="color:'+(st.profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(st.profit)+'</td><td><button class="btn s" data-act="edit">编</button> <button class="btn s" onclick="invDetail(\''+type+'\',\''+st.item.id+'\')">详</button> <button class="btn s d" data-act="del">×</button></td></tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td></td><td></td><td class="nr" style="font-weight:600">'+stats.reduce(function(s,st){return s+st.cups},0)+'</td><td class="nr" style="font-weight:600">'+stats.reduce(function(s,st){return s+st.pots},0)+'</td><td class="nr" style="font-weight:600">'+fmtC(tE)+'</td><td class="nr" style="font-weight:600;color:var(--gn)">'+fmtC(tA)+'</td><td class="nr" style="font-weight:600;color:'+(tP>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(tP)+'</td><td></td></tr>'}else{h+='<tr><th>品名</th><th>期初</th><th>单价/'+unit+'</th><th>销售('+unit+')</th><th>应收</th><th>实收</th><th>毛利</th><th>操作</th></tr>';stats.forEach(function(st){h+='<tr data-inv="'+type+'_'+st.item.id+'"><td>'+st.item.name+'</td><td class="nr">'+st.stock+unit+'</td><td class="nr">'+fmt(st.item.pricePerUnit||0)+'</td><td class="nr">'+st.qty+'</td><td class="nr">'+fmtC(st.expected)+'</td><td class="nr" style="color:var(--gn)">'+fmtC(st.actual)+'</td><td class="nr" style="color:'+(st.profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(st.profit)+'</td><td><button class="btn s" data-act="edit">编</button> <button class="btn s" onclick="invDetail(\''+type+'\',\''+st.item.id+'\')">详</button> <button class="btn s d" data-act="del">×</button></td></tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td></td><td></td><td class="nr" style="font-weight:600">'+stats.reduce(function(s,st){return s+st.qty},0)+unit+'</td><td class="nr" style="font-weight:600">'+fmtC(tE)+'</td><td class="nr" style="font-weight:600;color:var(--gn)">'+fmtC(tA)+'</td><td class="nr" style="font-weight:600;color:'+(tP>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(tP)+'</td><td></td></tr>'}h+='</table></div>'}else{h+='<div style="text-align:center;padding:30px;color:var(--tx-m)">暂无</div>'}h+='</div><div id="invHist" style="display:none"></div>';setMain(INV[type].label+'管理',h)}
 function switchInvT(tab,type){document.querySelectorAll('#invT .tab-btn').forEach(function(b,i){b.classList.toggle('active',i===(tab==='stock'?0:1))});document.getElementById('invStock').style.display=tab==='stock'?'':'none';document.getElementById('invHist').style.display=tab==='hist'?'':'none';if(tab==='hist')renderInvHist(type)}
-function renderInvHist(type){var el=document.getElementById('invHist');if(!el)return;var ym=curYM(),items=DB[INV[type].key]||[],unit=type==='cig'?'包':type==='alc'?'瓶':'';var mEl=document.getElementById('invHistM');if(mEl)ym=mEl.value||ym;var dateMap={};items.forEach(function(item){item.sales.forEach(function(s){if(!s.date||!s.date.startsWith(ym))return;if(!dateMap[s.date])dateMap[s.date]=[];dateMap[s.date].push({item:item,sale:s})})});var h='<div class="hrow"><label>月份</label><input class="inp" id="invHistM" type="month" value="'+ym+'" style="max-width:180px" onchange="renderInvHist(\''+type+'\')"></div>';var dates=Object.keys(dateMap).sort();if(!dates.length){h+='<div style="text-align:center;padding:30px;color:var(--tx-m)">本月暂无销售</div>';el.innerHTML=h;return}var _fid=0;dates.forEach(function(date){var daySales=dateMap[date];var dayTotal=daySales.reduce(function(s,d){return s+d.sale.amount},0);var fid=_fid++;h+='<div class="pur-folder"><div class="pur-hdr" style="font-size:.78rem" onclick="togglePF('+fid+')"><span class="ico" id="pfI_'+fid+'">▶</span> '+date+'<span class="total" style="color:var(--gn)">'+fmtC(dayTotal)+'</span></div><div class="pur-body" id="pfB_'+fid+'" style="display:none"><table class="pur-tbl"><tr><th>物品</th>';if(type==='tea')h+='<th>杯</th><th>壶</th>';else h+='<th>数量</th>';h+='<th>金额</th></tr>';daySales.forEach(function(d){h+='<tr><td>'+d.item.name+'</td>';if(type==='tea')h+='<td class="nr">'+(d.sale.cups||0)+'</td><td class="nr">'+(d.sale.pots||0)+'</td>';else h+='<td class="nr">'+(d.sale.qty||0)+unit+'</td>';h+='<td class="nr">'+fmtC(d.sale.amount)+'</td></tr>'});h+='</table></div></div>'});el.innerHTML=h}
+function renderInvHist(type){
+    var el=document.getElementById('invHist');
+    if(!el)return;
+    var ym=curYM();
+    var items=DB[INV[type].key]||[];
+    var unit=type==='cig'?'包':type==='alc'?'瓶':'';
+    var mEl=document.getElementById('invHistM');
+    if(mEl)ym=mEl.value||ym;
+
+    var year=parseInt(ym.split('-')[0]);
+    var month=parseInt(ym.split('-')[1]);
+    var daysInMonth=new Date(year,month,0).getDate();
+    var firstDay=new Date(year,month-1,1).getDay();
+    firstDay=firstDay===0?6:firstDay-1;
+    var todayStr=td();
+    var todayDay=parseInt(todayStr.split('-')[2]);
+    var isThisMonth=todayStr.startsWith(ym);
+
+    // 按日期汇总
+    var dayTotals={};
+    var dayRecords={};
+    items.forEach(function(item){
+        item.sales.forEach(function(s){
+            if(!s.date||!s.date.startsWith(ym))return;
+            var day=parseInt(s.date.substring(8,10));
+            if(!dayTotals[day])dayTotals[day]=0;
+            dayTotals[day]+=s.amount||0;
+            if(!dayRecords[s.date])dayRecords[s.date]=[];
+            dayRecords[s.date].push({item:item,sale:s});
+        });
+    });
+
+    var monthTotal=Object.values(dayTotals).reduce(function(s,v){return s+v},0);
+    var salesDays=Object.keys(dayTotals).length;
+
+    var h='';
+
+    // 月份选择
+    h+='<div class="hrow"><label>月份</label><input class="inp" id="invHistM" type="month" value="'+ym+'" style="max-width:180px" onchange="renderInvHist(\''+type+'\')"></div>';
+
+    // 日历
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:14px">';
+    ['一','二','三','四','五','六','日'].forEach(function(w){
+        h+='<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">'+w+'</div>';
+    });
+
+    for(var i=0;i<firstDay;i++)h+='<div></div>';
+
+    for(var d=1;d<=daysInMonth;d++){
+        var dateStr=ym+'-'+(d<10?'0'+d:d);
+        var has=!!dayTotals[d];
+        var isToday=isThisMonth&&d===todayDay;
+
+        var bg=has?'var(--card)':'var(--card-h)';
+        var border=isToday?'2px solid var(--ac)':'1px solid var(--bd)';
+        var cur=has?'pointer':'default';
+
+        h+='<div style="background:'+bg+';border:'+border+';border-radius:6px;padding:5px 4px;min-height:52px;cursor:'+cur+'"';
+        if(has)h+=' onclick="showInvDayModal(\''+type+'\',\''+dateStr+'\')"';
+        h+='><div style="font-size:.7rem;font-weight:600;color:'+(isToday?'var(--ac)':'var(--tx)')+'">'+d+'</div>';
+
+        if(has){
+            h+='<div style="font-family:var(--fm);font-size:.65rem;color:var(--ac);margin-top:2px">';
+            if(dayTotals[d]>=10000)h+=(dayTotals[d]/10000).toFixed(1)+'万';
+            else if(dayTotals[d]>=1000)h+=(dayTotals[d]/1000).toFixed(1)+'k';
+            else h+='¥'+dayTotals[d].toFixed(0);
+            h+='</div>';
+        }
+        h+='</div>';
+    }
+    h+='</div>';
+
+    el.innerHTML=h;
+}
+function showInvDayModal(type,date){
+    var items=DB[INV[type].key]||[];
+    var unit=type==='cig'?'包':type==='alc'?'瓶':'';
+    var records=[];
+    items.forEach(function(item){
+        item.sales.forEach(function(s){
+            if(s.date===date)records.push({item:item,sale:s});
+        });
+    });
+    if(!records.length){toast('这天没有销售记录');return}
+
+    var total=records.reduce(function(s,r){return s+(r.sale.amount||0)},0);
+    var dateLabel=date.substring(5).replace('-','/');
+
+    var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    h+='<h3 style="margin:0">'+dateLabel+' '+INV[type].label+'销售</h3>';
+    h+='<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥'+fmtC(total)+'</span></div>';
+
+    h+='<div style="max-height:50vh;overflow-y:auto;padding-right:4px">';
+    records.forEach(function(r){
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin-bottom:6px;background:var(--card-h);border:1px solid var(--bd);border-radius:8px">';
+        h+='<div style="flex:1;min-width:0">';
+        h+='<div style="font-size:.84rem;font-weight:600">'+r.item.name+'</div>';
+        if(type==='tea'){
+            h+='<div style="font-size:.72rem;color:var(--tx-m);margin-top:2px">'+(r.sale.cups||0)+'杯 · '+(r.sale.pots||0)+'壶</div>';
+        }else{
+            h+='<div style="font-size:.72rem;color:var(--tx-m);margin-top:2px">'+(r.sale.qty||0)+unit+'</div>';
+        }
+        h+='</div>';
+        h+='<span style="font-size:.88rem;font-weight:700;color:var(--ac)">¥'+fmtC(r.sale.amount||0)+'</span>';
+        h+='</div>';
+    });
+    h+='</div>';
+
+    h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    showModal(h,550);
+}
 function invDetail(type,itemId){var item=DB[INV[type].key].find(function(i){return i.id===itemId});if(!item)return;var unit=type==='cig'?'包':type==='alc'?'瓶':'';var ym=curYM();var h='';h+='<h3>'+item.name+' · 明细</h3>';h+='<div class="tab-bar" id="detTab">';h+='<button class="tab-btn active" onclick="switchDetTab('+String.fromCharCode(39)+'sale'+String.fromCharCode(39)+','+String.fromCharCode(39)+type+String.fromCharCode(39)+','+String.fromCharCode(39)+itemId+String.fromCharCode(39)+')">销售</button>';h+='<button class="tab-btn" onclick="switchDetTab('+String.fromCharCode(39)+'buy'+String.fromCharCode(39)+','+String.fromCharCode(39)+type+String.fromCharCode(39)+','+String.fromCharCode(39)+itemId+String.fromCharCode(39)+')">出入库</button>';h+='</div>';h+='<div id="detSaleArea"></div>';h+='<div id="detBuyArea" style="display:none"></div>';h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';showModal(h);document.getElementById('detSaleArea').innerHTML=renderSaleDetail(item,type,ym,unit);document.getElementById('detBuyArea').innerHTML=renderBuyDetail(item,type,ym,unit)}
 function switchDetTab(tab,type,itemId){document.querySelectorAll('#detTab .tab-btn').forEach(function(b,i){b.classList.toggle('active',i===(tab==='sale'?0:1))});document.getElementById('detSaleArea').style.display=tab==='sale'?'':'none';document.getElementById('detBuyArea').style.display=tab==='buy'?'':'none'}
 function renderSaleDetail(item,type,ym,unit){var h='<div class="hrow"><label>月份</label><input class="inp" id="detM" type="month" value="'+ym+'" style="max-width:180px" onchange="detRefresh(\''+type+'\',\''+item.id+'\')"></div>';var sales=[];try{sales=(item.sales||[]).filter(function(s){return s.date&&s.date.startsWith(ym)})}catch(e){}if(!sales.length){h+='<div style="text-align:center;padding:20px;color:var(--tx-m)">本月暂无销售</div>';return h}var totalQty=0,totalExp=0,totalAmt=0;h+='<div class="tw"><table><tr><th>日期</th>';if(type==='tea')h+='<th>杯</th><th>壶</th><th>应收</th><th>实收</th>';else h+='<th>数量</th><th>应收</th><th>实收</th>';h+='</tr>';sales.forEach(function(s){h+='<tr><td>'+s.date+'</td>';if(type==='tea'){var cups=s.cups||0,pots=s.pots||0;var exp=s.expectedAmount||(cups*(item.pricePerCup||0)+pots*(item.pricePerPot||0));var amt=s.amount||0;h+='<td class="nr">'+cups+'</td><td class="nr">'+pots+'</td><td class="nr">'+fmtC(exp)+'</td><td class="nr" style="color:var(--gn)">'+fmtC(amt)+'</td>';totalQty+=cups+pots}else{var qty=s.qty||0;var exp=qty*(item.pricePerUnit||0);var amt=s.amount||0;h+='<td class="nr">'+qty+unit+'</td><td class="nr">'+fmtC(exp)+'</td><td class="nr" style="color:var(--gn)">'+fmtC(amt)+'</td>';totalQty+=qty}totalExp+=exp;totalAmt+=amt;h+='</tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td>';if(type==='tea')h+='<td colspan="2" class="nr" style="font-weight:600">'+totalQty+'</td>';else h+='<td class="nr" style="font-weight:600">'+totalQty+unit+'</td>';h+='<td class="nr" style="font-weight:600">'+fmtC(totalExp)+'</td><td class="nr" style="font-weight:600;color:var(--gn)">'+fmtC(totalAmt)+'</td></tr></table></div>';return h}
