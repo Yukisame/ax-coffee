@@ -52,6 +52,7 @@ select{text-align:left!important;text-align-last:left!important;}
     .hrow input[type=date].inp{max-width:150px!important}}
 .del-btn{background:#fff!important;color:var(--rd)!important;border:1px solid var(--rd)!important}
 .del-btn:hover{background:rgba(224,85,85,0.1)!important}
+.hrow .inp[type="month"],.hrow select.inp{min-width:100px!important;flex:1!important}
 
 </style>
 </head>
@@ -451,82 +452,130 @@ function preprocessOCR(text) {
 }
 
 function parsePurchase(text) {
-    // 1. 先从原文提取日期（避免被预处理破坏）
-    var dm = text.match(/配送日期[：:]\s*(\d{4})[-\/.]\s*(\d{1,2})[-\/.]\s*(\d{1,2})/);
-    if (!dm) dm = text.match(/(\d{4})[-\/.年]\s*(\d{1,2})[-\/.月]\s*(\d{1,2})/);
+    // 1. 提取日期
+    var dm = text.match(/(\d{4})[-\/.年]\s*(\d{1,2})[-\/.月]\s*(\d{1,2})/);
 
-    // 2. 先从原文检测来源
+    // 2. 检测来源
     var isAx = /岸香.*贸易|贸易.*岸香/.test(text);
 
-    // 3. OCR预处理（含竖表转横表）
-    text = preprocessOCR(text);
-
-    var r = {date:td(), items:[], source:'外购'};
-    if (dm) r.date = dm[1] + '-' + String(dm[2]).padStart(2,'0') + '-' + String(dm[3]).padStart(2,'0');
+    var r = { date: td(), items: [], source: '外购' };
+    if (dm) r.date = dm[1] + '-' + String(dm[2]).padStart(2, '0') + '-' + String(dm[3]).padStart(2, '0');
     if (isAx) r.source = '岸香贸易';
 
-    // 4. 辅助函数
-    function pQU(cell) {
-        var clean = cell.replace(/$$[^)]*$$/g,'').trim();
-        var parts = clean.split(/[×*]/);
-        var qm = parts[0].match(/([\d.]+)/);
-        var q = 0, u = '';
-        if (qm) { q = parseFloat(qm[1]); u = parts[0].replace(/[\d.]+/,'').trim(); }
-        return {qty:q, unit:u};
-    }
-    function isPureUnit(t) {
-        return /^[\u4e00-\u9fa5]{1,3}$/.test(t.trim()) && isNaN(parseFloat(t.trim()));
-    }
+    // 3. 跳过的行
+    var skipRe = /合计|本页|当日|区域|以下是|好的|已删除|不录入|因.*空白|---|品名.*规格|:---/;
 
-    // 5. 逐行解析
+    // 4. 逐行解析
     text.split('\n').forEach(function(raw) {
         var l = raw.trim();
         if (!l) return;
-        l = l.replace(/\*\*/g,'');
 
-        // 分隔符：tab或多个空格
-        var cells;
-        if (l.indexOf('\t') >= 0) {
-            cells = l.split('\t').map(function(s){return s.trim()}).filter(function(s){return s});
-        } else {
-            cells = l.split(/\s{2,}/).filter(function(s){return s.trim()});
+        // 去掉行首emoji和特殊符号
+        l = l.replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]\s*/u, '');
+        l = l.replace(/^\*\*/g, '');
+        l = l.replace(/^📌\s*/, '');
+        l = l.replace(/^>\s*/, '');
+
+        // 跳过标题、备注、汇总、表头
+        if (skipRe.test(l)) return;
+        if (/^#{1,6}\s/.test(l)) return;
+        if (/^[-—]{3,}$/.test(l)) return;
+
+        // 判断是否是 Markdown 表格行（以 | 开头）
+        if (/^\|/.test(l)) {
+            // 去掉首尾的 |
+            l = l.replace(/^\|/, '').replace(/\|$/, '');
+            var cells = l.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+
+            if (cells.length >= 4) {
+                var name = cells[0];
+                if (name.length < 2 || !/[\u4e00-\u9fa5a-zA-Z]/.test(name)) return;
+
+                var qty = 0, unit = '', unitPrice = 0, total = 0;
+
+                if (cells.length >= 5) {
+                    // 品名 | 规格 | 数量 | 单价 | 总价 | 分类
+                    var q1 = parseQty(cells[2]);
+                    qty = q1.qty;
+                    unit = q1.unit;
+
+                    var upStr = cells[3].replace(/,/g, '');
+                    var upParts = upStr.split('/');
+                    unitPrice = parseFloat(upParts[0]) || 0;
+                    if (!unit && upParts[1]) unit = upParts[1].trim();
+
+                    total = parseFloat(cells[4].replace(/,/g, '').replace(/\*+$/, '')) || 0;
+                } else if (cells.length === 4) {
+                    // 品名 | 数量 | 单价 | 总价
+                    var q2 = parseQty(cells[1]);
+                    qty = q2.qty;
+                    unit = q2.unit;
+
+                    var upStr2 = cells[2].replace(/,/g, '');
+                    var upParts2 = upStr2.split('/');
+                    unitPrice = parseFloat(upParts2[0]) || 0;
+                    if (!unit && upParts2[1]) unit = upParts2[1].trim();
+
+                    total = parseFloat(cells[3].replace(/,/g, '').replace(/\*+$/, '')) || 0;
+                }
+
+                if (!unitPrice && total > 0 && qty > 0) {
+                    unitPrice = Math.round(total / qty * 100) / 100;
+                }
+
+                if (qty > 0 && total > 0) {
+                    r.items.push({
+                        name: name,
+                        section: '',
+                        category: '',
+                        qty: qty,
+                        unit: unit,
+                        unitPrice: unitPrice,
+                        total: total,
+                        source: r.source
+                    });
+                }
+            }
+            return;
         }
-        if (cells.length < 3) return;
 
-        var name = cells[0].trim();
-        if (!/[\u4e00-\u9fa5a-zA-Z]/.test(name)) return;
+        // 非 Markdown 行：用正则匹配
+        var m = l.match(/^(.+)\s+(\d+\.?\d*\S*)\s+(\d+\.?\d*\S*)\s+(\d+\.?\d*)\s*$/);
+        if (!m) return;
 
-        var qty = 0, unit = '', total = 0, unitPrice = 0;
+        var name = m[1].trim();
+        if (name.length < 2 || !/[\u4e00-\u9fa5a-zA-Z]/.test(name)) return;
 
-        if (cells.length >= 4) {
-            // 品名 + 数量 + 单价 + 金额
-            var qu = pQU(cells[1]);
-            qty = qu.qty; unit = qu.unit;
-            var upm = cells[2].match(/([\d.]+)/);
-            unitPrice = upm ? parseFloat(upm[1]) : 0;
-            total = parseFloat(cells[3].replace(/,/g,'').replace(/\.$/,'')) || 0;
-        } else {
-            // 品名 + 数量 + 金额
-            var qu = pQU(cells[1]);
-            qty = qu.qty; unit = qu.unit;
-            total = parseFloat(cells[2].replace(/,/g,'').replace(/\.$/,'')) || 0;
-        }
+        var qm = m[2].match(/([\d.]+)\s*(.*)/);
+        var qty = qm ? parseFloat(qm[1]) : 0;
+        var unit = qm ? (qm[2] || '').trim() : '';
+
+        var upStr = m[3].replace(/,/g, '');
+        var upParts = upStr.split('/');
+        var unitPrice = parseFloat(upParts[0]) || 0;
+        if (!unit && upParts[1]) unit = upParts[1].trim();
+
+        var total = parseFloat(m[4].replace(/,/g, '')) || 0;
 
         if (!unitPrice && total > 0 && qty > 0) {
             unitPrice = Math.round(total / qty * 100) / 100;
         }
 
-        if (qty > 0 && !isNaN(total)) {
+        if (qty > 0 && total > 0) {
             r.items.push({
-                name: name, section:'', category:'',
-                qty: qty, unit: unit,
-                unitPrice: unitPrice, total: total,
+                name: name,
+                section: '',
+                category: '',
+                qty: qty,
+                unit: unit,
+                unitPrice: unitPrice,
+                total: total,
                 source: r.source
             });
         }
     });
 
-    // 6. 数量校正（防止OCR数量错乱）
+    // 5. 数量校正
     r.items.forEach(function(item) {
         if (item.total > 0 && item.unitPrice > 0) {
             var eq = Math.round(item.total / item.unitPrice);
@@ -535,6 +584,18 @@ function parsePurchase(text) {
     });
 
     return r;
+}
+
+
+
+// 解析"数量单位"格式，如 "1件" "2桶" "10包"
+function parseQty(str) {
+    str = str.trim();
+    var m = str.match(/([\d.]+)\s*(.*)/);
+    if (m) {
+        return {qty: parseFloat(m[1]) || 0, unit: (m[2] || '').trim()};
+    }
+    return {qty: 0, unit: ''};
 }
 
 // ========================================
@@ -1133,7 +1194,25 @@ function doMimoTextParse(){
     if(!ep||!key){toast('请先在设置页配置MiMo API');return}
     var text=$id('ptInput').value.trim();
     if(!text){toast('请先粘贴文字内容');return}
-    var prompt='请解析以下采购单/出库单文字，提取所有商品信息。文字可能有OCR错误，请智能纠正。\n\n请严格按以下JSON格式返回，不要有任何其他文字：\n\n{\n  "date": "YYYY-MM-DD格式的日期，没有就留空字符串",\n  "source": "供应商名称，没有就留空字符串",\n  "items": [\n    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额}\n  ]\n}\n\n以下是要解析的文字：\n---\n'+text+'\n---';
+    var prompt = '请解析以下采购单/出库单文字，提取所有商品信息。\n\n'
+    + '格式可能是：品名 规格 数量 单价/单位 总价\n'
+    + '例如："古越龙山500ML花雕酒 1件 1件 69.00/件 69.00"\n'
+    + 'qty=1, unit="件", unitPrice=69.00, total=69.00\n\n'
+    + '注意：\n'
+    + '1. 某些行是标题/备注/汇总，不要提取\n'
+    + '2. "因空白已删除"的行不要提取\n'
+    + '3. "单价/单位"格式中，数字是单价，斜杠后面是单位\n'
+    + '4. 请智能纠正OCR错误\n\n'
+    + '请严格按以下JSON格式返回，不要有任何其他文字：\n'
+    + '{\n'
+    + '  "date": "YYYY-MM-DD",\n'
+    + '  "source": "供应商名称",\n'
+    + '  "items": [\n'
+    + '    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额}\n'
+    + '  ]\n'
+    + '}\n\n'
+    + '以下是采购单文字：\n---\n' + text + '\n---';
+
     var body={model:model,messages:[{role:'user',content:prompt}],max_tokens:4096,temperature:0.1};
     var h='<div style="text-align:center;padding:10px">';
     h+='<div style="font-size:.88rem;font-weight:700;margin-bottom:8px">确认发送到MiMo解析？</div>';
@@ -1145,48 +1224,77 @@ function doMimoTextParse(){
     window._pendingMimoEp=ep;
     window._pendingMimoKey=key;
 }
-function doMimoTextParseGo(){
+function doMimoTextParseGo() {
     closeModal();
     showAILoading();
-    var body=window._pendingMimoBody;
-    var ep=window._pendingMimoEp;
-    var key=window._pendingMimoKey;
-    var xhr=new XMLHttpRequest();
-    xhr.open('POST',ep,true);
-    xhr.setRequestHeader('Content-Type','application/json');
-    xhr.setRequestHeader('Authorization','Bearer '+key);
-    xhr.timeout=120000;
-    xhr.onload=function(){
+    var body = window._pendingMimoBody;
+    var ep = window._pendingMimoEp;
+    var key = window._pendingMimoKey;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', ep, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', 'Bearer ' + key);
+    xhr.timeout = 120000;
+    xhr.onload = function() {
         hideAILoading();
-        console.log('MiMo返回:',xhr.status,xhr.responseText.substring(0,300));
-        try{
-            var data=JSON.parse(xhr.responseText);
-            var reply='';
-            if(data.choices&&data.choices[0])reply=data.choices[0].message.content||'';
-            if(!reply){toast('AI返回为空');return}
-            var m=reply.match(/\{[\s\S]*\}/);
-            if(!m){toast('AI未返回JSON格式');return}
-            var result=JSON.parse(m[0]);
-            if(!result.items||!result.items.length){toast('未识别到商品');return}
-            if(!result.date)result.date=td();
-            var src=result.source||'';
-            if(/岸香.*贸易|贸易.*岸香/.test(src))src='岸香贸易';
-            else if(!src)src='外购';
-            var items=[];
-            result.items.forEach(function(item){
-                var qty=parseFloat(item.qty)||0,total=parseFloat(item.total)||0,unitPrice=parseFloat(item.unitPrice)||0;
-                if(!unitPrice&&total>0&&qty>0)unitPrice=Math.round(total/qty*100)/100;
-                if(qty>0&&total>0)items.push({name:item.name||'',section:'',category:'',qty:qty,unit:item.unit||'',unitPrice:unitPrice,total:total,source:src});
+        try {
+            var data = JSON.parse(xhr.responseText);
+            var reply = '';
+            if (data.choices && data.choices[0]) reply = data.choices[0].message.content || '';
+            if (!reply) { toast('AI返回为空'); return; }
+            var m = reply.match(/\{[\s\S]*\}/);
+            if (!m) { toast('AI未返回JSON格式'); return; }
+            var result = JSON.parse(m[0]);
+            if (!result.items || !result.items.length) { toast('未识别到商品'); return; }
+            if (!result.date) result.date = td();
+            var src = result.source || '';
+            if (/岸香.*贸易|贸易.*岸香/.test(src)) src = '岸香贸易';
+            else if (!src) src = '外购';
+
+            // 填入手动录入表单
+            _pmItems = [];
+            result.items.forEach(function(item) {
+                var qty = parseFloat(item.qty) || 0;
+                var total = parseFloat(item.total) || 0;
+                var unitPrice = parseFloat(item.unitPrice) || 0;
+                if (!unitPrice && total > 0 && qty > 0) unitPrice = Math.round(total / qty * 100) / 100;
+                if (qty > 0 && total > 0) {
+                    _pmItems.push({
+                        name: item.name || '',
+                        section: '',
+                        category: '',
+                        qty: qty,
+                        unit: item.unit || '',
+                        unitPrice: unitPrice,
+                        total: total,
+                        source: src
+                    });
+                }
             });
-            if(!items.length){toast('解析结果为空');return}
-            window._mimoResult={date:result.date,source:src,items:items};
-            showMimoConfirm();
-        }catch(e){toast('解析失败');console.error(e)}
+
+            if (!_pmItems.length) { toast('解析结果为空'); return; }
+
+            // 切换到手动录入
+            switchPT('manual');
+            setTimeout(function() {
+                if ($id('pmDate')) $id('pmDate').value = result.date;
+                if ($id('pmSrc')) {
+                    var srcSel = $id('pmSrc');
+                    for (var i = 0; i < srcSel.options.length; i++) {
+                        if (srcSel.options[i].value === src) { srcSel.selectedIndex = i; break; }
+                    }
+                }
+                renderPML();
+                toast('AI已识别 ' + _pmItems.length + ' 项物品');
+            }, 100);
+
+        } catch (e) { toast('解析失败'); console.error(e); }
     };
-    xhr.onerror=function(){hideAILoading();toast('请求失败');};
-    xhr.ontimeout=function(){hideAILoading();toast('请求超时');};
+    xhr.onerror = function() { hideAILoading(); toast('请求失败'); };
+    xhr.ontimeout = function() { hideAILoading(); toast('请求超时'); };
     xhr.send(JSON.stringify(body));
 }
+
 
 function doAIParse(){
     if(!localStorage.getItem('ax_mimo_key')){toast('请先在设置页配置MiMo API');return}
@@ -1328,61 +1436,42 @@ function mimoBatchFill(field){var r=window._mimoResult;if(!r)return;var selId=fi
 
 function doMimoConfirm(){var r=window._mimoResult;if(!r)return;var src=document.getElementById('pResSrc').value||'岸香贸易';r.items.forEach(function(item){item.source=src});_pmItems=JSON.parse(JSON.stringify(r.items));_editPurId=null;closeModal();$id('pmDate').value=r.date;$id('pmSrc').value=src;switchPT('manual');renderPML();toast('已导入 '+_pmItems.length+' 项，请检查后保存')}
 
-function doParsePur(){
-    var text=$id('ptInput').value.trim();
-    if(!text){toast('请先粘贴采购单文字');return}
-    var result=parsePurchase(text);
-    if(!result.items.length){toast('未识别到物品，请检查文字格式');return}
-    var srcTotal=result.items.reduce(function(s,i){return s+i.total},0);
-    var secs=['厨房','吧台','外场'];
-    var cats=getPurCats();
-    var h='';
-    h+='<h3>识别结果</h3>';
-    h+='<div class="cards">';
-    h+='<div class="card"><div class="card-l">日期</div><div class="card-v">'+result.date+'</div></div>';
-    h+='<div class="card"><div class="card-l">物品</div><div class="card-v ac">'+result.items.length+'项</div></div>';
-    h+='<div class="card"><div class="card-l">合计</div><div class="card-v">'+fmtC(srcTotal)+'</div></div>';
-    h+='<div class="card"><div class="card-l">来源</div><div class="card-v">'+result.source+'</div></div>';
-    h+='</div>';
-    h+='<div class="hrow"><label>来源</label>';
-    h+='<select class="inp" id="pResSrc" style="max-width:120px">';
-    h+='<option'+(result.source==='岸香贸易'?' selected':'')+'>岸香贸易</option>';
-    h+='<option'+(result.source==='外购'?' selected':'')+'>外购</option>';
-    h+='</select></div>';
-    h+='<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';
-    h+='<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';
-    h+='<div class="hrow"><label>区域</label>';
-    h+='<select class="inp" id="parseBatchSec" style="max-width:110px"><option value="">不填充</option>';
-    secs.forEach(function(s){h+='<option>'+s+'</option>'});
-    h+='</select><button class="btn s" onclick="parseBatchFill(\'section\')">应用</button>';
-    h+='<label style="margin-left:10px">分类</label>';
-    h+='<select class="inp" id="parseBatchCat" style="max-width:130px"><option value="">不填充</option>';
-    cats.forEach(function(c){h+='<option>'+c+'</option>'});
-    h+='</select><button class="btn s" onclick="parseBatchFill(\'category\')">应用</button></div></div>';
-    h+='<div class="sec">物品列表</div>';
-    h+='<div id="parseTableWrap"><div class="tw"><table id="parseTbl">';
-    h+='<tr><th>品名</th><th>数量</th><th>单价</th><th>总价</th><th>区域</th><th>分类</th></tr>';
-    result.items.forEach(function(item,idx){
-        h+='<tr><td>'+item.name+'</td>';
-        h+='<td class="nr">'+item.qty+(item.unit||'')+'</td>';
-        h+='<td class="nr">'+fmt(item.unitPrice)+'</td>';
-        h+='<td class="nr">'+fmtC(item.total)+'</td>';
-        h+='<td><select class="pm-edit" style="width:65px;font-size:70%" onchange="parseResFieldChange('+idx+',\'section\',this.value)">';
-        h+='<option value="">-</option>';
-        secs.forEach(function(s){h+='<option'+(item.section===s?' selected':'')+'>'+s+'</option>'});
-        h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td>';
-        h+='<td><select class="pm-edit" style="width:85px;font-size:70%" onchange="parseResFieldChange('+idx+',\'category\',this.value)">';
-        h+='<option value="">-</option>';
-        cats.forEach(function(c){h+='<option'+(item.category===c?' selected':'')+'>'+c+'</option>'});
-        h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td></tr>';
+function doParsePur() {
+    var text = $id('ptInput').value.trim();
+    if (!text) { toast('请先粘贴采购单文字'); return; }
+    var result = parsePurchase(text);
+    if (!result.items.length) { toast('未识别到物品，请检查文字格式'); return; }
+
+    // 填入手动录入表单
+    _pmItems = [];
+    result.items.forEach(function(item) {
+        _pmItems.push({
+            name: item.name,
+            section: item.section || '',
+            category: item.category || '',
+            qty: item.qty,
+            unit: item.unit || '',
+            unitPrice: item.unitPrice,
+            total: item.total,
+            source: result.source || '外购'
+        });
     });
-    h+='</table></div></div>';
-    h+='<div class="brow" style="margin-top:14px">';
-    h+='<button class="btn p" onclick="doParsePurConfirm()">确认并编辑</button>';
-    h+='<button class="btn" onclick="closeModal()">取消</button></div>';
-    showModal(h,700);
-    window._parseResult=result;
+
+    // 设置日期和来源
+    switchPT('manual');
+    setTimeout(function() {
+        if ($id('pmDate')) $id('pmDate').value = result.date;
+        if ($id('pmSrc')) {
+            var srcSel = $id('pmSrc');
+            for (var i = 0; i < srcSel.options.length; i++) {
+                if (srcSel.options[i].value === result.source) { srcSel.selectedIndex = i; break; }
+            }
+        }
+        renderPML();
+        toast('已识别 ' + _pmItems.length + ' 项物品');
+    }, 100);
 }
+
 
 
 
@@ -1436,7 +1525,9 @@ function rPurchase(){
     h+='<option value="">请先选区域</option>';
     h+='</select>';
     h+='<input class="inp" id="pmCatC" style="display:none;max-width:130px" placeholder="输入分类">';
+    h+='<button class="btn s" onclick="manageCats()">管理</button>';
     h+='</div>';
+
 
     // 品名、数量、单位、单价、总价、添加按钮
     h+='<div class="hrow">';
@@ -1494,13 +1585,136 @@ function pmSecChanged(sel){
     document.getElementById('pmCatC').style.display='none';
 }
 
+// 批量填充区域变化 → 分类跟着变
+function batchSecChanged(sel) {
+    var area = sel.value;
+    var catSel = document.getElementById('pmBatchCat');
+    if (!catSel) return;
+    if (!area) {
+        catSel.innerHTML = '<option value="">请先选区域</option>';
+        return;
+    }
+    var cats = getPurCats(area);
+    var html = '<option value="">不填充</option>';
+    cats.forEach(function(c) { html += '<option>' + c + '</option>'; });
+    catSel.innerHTML = html;
+}
+
+// 批量填充分类变化 → 批量应用
+function batchCatChanged(sel) {
+    var val = sel.value;
+    if (!val) return;
+    _pmItems.forEach(function(item) {
+        if (!item.category) item.category = val;
+    });
+    renderPML();
+    toast('已填充分类');
+}
+
 function addPurItem(){var n=$id('pmName').value.trim();if(!n){toast('填品名');return}var q=parseFloat($id('pmQty').value)||0,t=parseFloat($id('pmTotal').value)||0,up=parseFloat($id('pmUnitPrice').value)||0;if(!up&&q>0&&t>0)up=Math.round(t/q*100)/100;var sec=getSelVal('pmSec','pmSecC');var cat=getSelVal('pmCat','pmCatC');_pmItems.push({name:n,section:sec,category:cat,qty:q,unit:$id('pmUnit').value.trim(),unitPrice:up,total:t,source:$id('pmSrc').value});$id('pmName').value='';$id('pmQty').value='';$id('pmTotal').value='';$id('pmUnitPrice').value='';$id('pmUnit').value='';renderPML()}
 
 // ========================================
 // 手动录入的物品列表渲染
 // 改动：区域变化时分类下拉跟着变
 // ========================================
-function renderPML(){var el=$id('pmList');if(!el)return;var secs=['厨房','吧台','外场'];var h='';if(_pmItems.length>0){h+='<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';h+='<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';h+='<div class="hrow"><label>区域</label><select class="inp" id="pmBatchSec" style="max-width:110px"><option value="">不填充</option>';secs.forEach(function(s){h+='<option>'+s+'</option>'});h+='</select><button class="btn s" onclick="batchFill(\'section\',document.getElementById(\'pmBatchSec\').value)">应用</button></div></div>'}if(!_pmItems.length){h+='<div style="font-size:.74rem;color:var(--tx-m);padding:8px 0">无物品</div>'}else{h+='<div class="tw"><table><tr><th>品名</th><th>区域</th><th>分类</th><th>数量</th><th>单位</th><th>单价</th><th>总价</th><th></th></tr>';_pmItems.forEach(function(i,idx){var itemCats=getPurCats(i.section);h+='<tr>';h+='<td><input class="pm-edit" style="min-width:110px" value="'+i.name.replace(/"/g,'&quot;')+'" onchange="pmEdit('+idx+',\'name\',this.value)"></td>';h+='<td><select class="pm-edit" style="width:65px" onchange="purAreaChanged(this,'+idx+')">';h+='<option value="">-</option>';secs.forEach(function(s){h+='<option'+(i.section===s?' selected':'')+'>'+s+'</option>'});h+='</select></td>';h+='<td><select class="pm-edit" style="width:85px" onchange="pmEditSel('+idx+',\'category\',this.value)">';h+='<option value="">-</option>';itemCats.forEach(function(c){h+='<option'+(i.category===c?' selected':'')+'>'+c+'</option>'});h+='<option value="__custom">自定义</option><option value="__clear">清除</option></select></td>';h+='<td><input class="pm-edit nr" type="number" step="any" style="width:50px" value="'+i.qty+'" onchange="pmEdit('+idx+',\'qty\',this.value)"></td>';h+='<td><input class="pm-edit" style="width:40px" value="'+(i.unit||'')+'" onchange="pmEdit('+idx+',\'unit\',this.value)"></td>';h+='<td><input class="pm-edit nr" type="number" step="0.01" style="width:70px" value="'+(i.unitPrice||0)+'" onchange="pmEdit('+idx+',\'unitPrice\',this.value)"></td>';h+='<td><input class="pm-edit nr" type="number" step="0.01" style="width:80px" value="'+i.total+'" onchange="pmEdit('+idx+',\'total\',this.value)"></td>';h+='<td><button class="btn s d" onclick="_pmItems.splice('+idx+',1);renderPML()">×</button></td>';h+='</tr>'});h+='</table></div>'}el.innerHTML=h}
+function renderPML() {
+    var el = $id('pmList');
+    if (!el) return;
+
+    var secs = ['厨房', '吧台', '外场'];
+    var srcs = ['岸香贸易', '外购'];
+    var h = '';
+
+    // 批量填充区域
+    if (_pmItems.length > 0) {
+        h += '<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';
+        h += '<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';
+
+        // 来源
+        h += '<div class="hrow"><label>来源</label>';
+        h += '<select class="inp" id="pmBatchSrc" style="max-width:110px"><option value="">不填充</option>';
+        srcs.forEach(function(s) { h += '<option>' + s + '</option>'; });
+        h += '</select>';
+        h += '<button class="btn s" onclick="batchFill(\'source\',document.getElementById(\'pmBatchSrc\').value)">应用</button>';
+
+        // 区域
+        h += '<label>区域</label>';
+        h += '<select class="inp" id="pmBatchSec" style="max-width:110px" onchange="batchSecChanged(this)"><option value="">不填充</option>';
+        secs.forEach(function(s) { h += '<option>' + s + '</option>'; });
+        h += '</select>';
+        h += '<button class="btn s" onclick="batchFill(\'section\',document.getElementById(\'pmBatchSec\').value)">应用</button></div>';
+
+        // 分类（跟随区域联动）
+        h += '<div class="hrow"><label>分类</label>';
+        h += '<select class="inp" id="pmBatchCat" style="max-width:130px" onchange="batchCatChanged(this)">';
+        h += '<option value="">请先选区域</option>';
+        h += '</select>';
+        h += '<button class="btn s" onclick="batchFill(\'category\',document.getElementById(\'pmBatchCat\').value)">应用</button></div>';
+
+    }
+
+    // 物品列表
+    if (!_pmItems.length) {
+        h += '<div style="font-size:.74rem;color:var(--tx-m);padding:8px 0">无物品</div>';
+    } else {
+        h += '<div class="tw"><table>';
+        h += '<tr><th>品名</th><th>来源</th><th>区域</th><th>分类</th><th>数量</th><th>单位</th><th>单价</th><th>总价</th><th></th></tr>';
+
+        _pmItems.forEach(function(i, idx) {
+            var itemCats = getPurCats(i.section);
+
+            h += '<tr>';
+
+            // 品名
+            h += '<td><input class="pm-edit" style="min-width:110px" value="' + i.name.replace(/"/g, '&quot;') + '" onchange="pmEdit(' + idx + ',\'name\',this.value)"></td>';
+
+            // 来源
+            h += '<td><select class="pm-edit" style="width:80px" onchange="pmEdit(' + idx + ',\'source\',this.value)">';
+            h += '<option value="">-</option>';
+            srcs.forEach(function(s) {
+                h += '<option' + ((i.source || '') === s ? ' selected' : '') + '>' + s + '</option>';
+            });
+            h += '</select></td>';
+
+            // 区域
+            h += '<td><select class="pm-edit" style="width:65px" onchange="purAreaChanged(this,' + idx + ')">';
+            h += '<option value="">-</option>';
+            secs.forEach(function(s) {
+                h += '<option' + (i.section === s ? ' selected' : '') + '>' + s + '</option>';
+            });
+            h += '</select></td>';
+
+            // 分类
+            h += '<td><select class="pm-edit" style="width:85px" onchange="pmEditSel(' + idx + ',\'category\',this.value)">';
+            h += '<option value="">-</option>';
+            itemCats.forEach(function(c) {
+                h += '<option' + (i.category === c ? ' selected' : '') + '>' + c + '</option>';
+            });
+            h += '<option value="__custom">自定义</option><option value="__clear">清除</option></select></td>';
+
+            // 数量
+            h += '<td><input class="pm-edit nr" type="number" step="any" style="width:50px" value="' + i.qty + '" onchange="pmEdit(' + idx + ',\'qty\',this.value)"></td>';
+
+            // 单位
+            h += '<td><input class="pm-edit" style="width:40px" value="' + (i.unit || '') + '" onchange="pmEdit(' + idx + ',\'unit\',this.value)"></td>';
+
+            // 单价
+            h += '<td><input class="pm-edit nr" type="number" step="0.01" style="width:70px" value="' + (i.unitPrice || 0) + '" onchange="pmEdit(' + idx + ',\'unitPrice\',this.value)"></td>';
+
+            // 总价
+            h += '<td><input class="pm-edit nr" type="number" step="0.01" style="width:80px" value="' + i.total + '" onchange="pmEdit(' + idx + ',\'total\',this.value)"></td>';
+
+            // 删除
+            h += '<td><button class="btn s d" onclick="_pmItems.splice(' + idx + ',1);renderPML()">×</button></td>';
+
+            h += '</tr>';
+        });
+
+        h += '</table></div>';
+    }
+
+    el.innerHTML = h;
+}
 
 function pmEditSel(idx,field,val){if(val==='__clear'){_pmItems[idx][field]='';renderPML();return}if(val==='__custom'){setTimeout(function(){var v=prompt('输入'+(field==='section'?'区域':'分类'));if(v&&v.trim()){v=v.trim();_pmItems[idx][field]=v;var sel=document.querySelectorAll('#pmList .tw table tr')[idx+1];if(sel){var sels=sel.querySelectorAll('select');var si=field==='section'?0:1;if(sels[si]){var found=false;for(var i=0;i<sels[si].options.length;i++){if(sels[si].options[i].value===v){found=true;break}}if(!found){var opt=document.createElement('option');opt.text=v;sels[si].insertBefore(opt,sels[si].querySelector('[value="__custom"]'))}sels[si].value=v}}}else{renderPML()}},50);return}_pmItems[idx][field]=val}
 
@@ -1751,6 +1965,128 @@ function renderPHist(){
     }
 
     el.innerHTML=h;
+}
+
+function showPurDayModal(date) {
+    var dayPurchases = DB.purchases.filter(function(p) { return p.date === date; });
+    if (!dayPurchases.length) { toast('这天没有采购记录'); return; }
+
+    var allItems = [];
+    dayPurchases.forEach(function(p) {
+        p.items.forEach(function(item) {
+            allItems.push({
+                name: item.name,
+                section: item.section || '未分区',
+                category: item.category || '未分类',
+                source: item.source || p.source || '外购',
+                qty: item.qty || 0,
+                unit: item.unit || '',
+                unitPrice: item.unitPrice || 0,
+                total: item.total || 0
+            });
+        });
+    });
+
+    var total = allItems.reduce(function(s, item) { return s + item.total; }, 0);
+    var dateLabel = date.substring(5).replace('-', '/');
+
+    // 标题
+    var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    h += '<h3 style="margin:0">' + dateLabel + ' 采购明细</h3>';
+    h += '<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥' + fmtC(total) + '</span></div>';
+
+    // 按 来源 > 区域 > 分类 分组
+    var grouped = {};
+    allItems.forEach(function(item) {
+        if (!grouped[item.source]) grouped[item.source] = {};
+        if (!grouped[item.source][item.section]) grouped[item.source][item.section] = {};
+        if (!grouped[item.source][item.section][item.category]) grouped[item.source][item.section][item.category] = [];
+        grouped[item.source][item.section][item.category].push(item);
+    });
+
+    h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
+
+    // 遍历来源
+    Object.keys(grouped).forEach(function(src) {
+        var srcTotal = 0;
+        Object.keys(grouped[src]).forEach(function(sec) {
+            Object.keys(grouped[src][sec]).forEach(function(cat) {
+                grouped[src][sec][cat].forEach(function(it) { srcTotal += it.total; });
+            });
+        });
+
+        // 来源标题
+        h += '<div style="margin-bottom:12px">';
+        h += '<div style="font-size:.84rem;font-weight:700;color:var(--ac);padding:6px 0;border-bottom:1px solid var(--bd);margin-bottom:6px">';
+        h += src + ' <span style="font-family:var(--fm);font-weight:400;color:var(--tx-m)">¥' + fmtC(srcTotal) + '</span></div>';
+
+        // 遍历区域
+        Object.keys(grouped[src]).forEach(function(sec) {
+            var secTotal = 0;
+            Object.keys(grouped[src][sec]).forEach(function(cat) {
+                grouped[src][sec][cat].forEach(function(it) { secTotal += it.total; });
+            });
+
+            h += '<div style="margin-left:10px;margin-bottom:8px">';
+            h += '<div style="font-size:.78rem;font-weight:600;color:var(--tx);padding:3px 0">';
+            h += '▸ ' + sec + ' <span style="font-family:var(--fm);font-weight:400;font-size:.72rem;color:var(--tx-m)">¥' + fmtC(secTotal) + '</span></div>';
+
+            // 遍历分类
+            Object.keys(grouped[src][sec]).forEach(function(cat) {
+                var items = grouped[src][sec][cat];
+                var catTotal = items.reduce(function(s, it) { return s + it.total; }, 0);
+
+                h += '<div style="margin-left:14px;margin-bottom:6px">';
+                h += '<div style="font-size:.72rem;color:var(--tx-s);padding:2px 0">';
+                h += cat + ' <span style="font-family:var(--fm);color:var(--tx-m)">¥' + fmtC(catTotal) + '</span></div>';
+
+                // 每个物品
+                items.forEach(function(item) {
+                    h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;margin-bottom:3px;background:var(--card-h);border:1px solid var(--bd-l);border-radius:6px">';
+                    h += '<div style="flex:1;min-width:0">';
+                    h += '<div style="font-size:.78rem;font-weight:600">' + item.name + '</div>';
+                    h += '<div style="font-size:.65rem;color:var(--tx-s)">' + item.qty + (item.unit || '') + ' × ¥' + fmt(item.unitPrice) + '</div>';
+                    h += '</div>';
+                    h += '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">';
+                    h += '<span style="font-size:.82rem;font-weight:700;color:var(--ac)">¥' + fmtC(item.total) + '</span>';
+                    h += '<button class="btn s" style="font-size:.65rem;padding:2px 6px" onclick="editPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">编</button>';
+                    h += '<button class="btn s del-btn" style="font-size:.65rem;padding:2px 6px" onclick="delPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">删</button>';
+                    h += '</div></div>';
+                });
+
+                h += '</div>'; // 分类
+            });
+
+            h += '</div>'; // 区域
+        });
+
+        h += '</div>'; // 来源
+    });
+
+    h += '</div>'; // 滚动区
+
+    h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    showModal(h, 600);
+}
+
+function editPurFromModal(date, name) {
+    closeModal();
+    editPurByDate(date, name);
+}
+
+function delPurFromModal(date, name) {
+    if (!confirm('确认删除？')) return;
+    upd(function(db) {
+        db.purchases.forEach(function(p) {
+            if (p.date !== date) return;
+            p.items = p.items.filter(function(item) { return item.name !== name; });
+        });
+        db.purchases = db.purchases.filter(function(p) { return p.items.length > 0; });
+    });
+    toast('已删除');
+    renderPHist();
+    var remain = DB.purchases.filter(function(p) { return p.date === date; });
+    if (remain.length) showPurDayModal(date);
 }
 
 // ========================================
@@ -2630,30 +2966,523 @@ function doAddDmg(){var itemSel=document.getElementById('dmgItem').value;if(!ite
 function delDmg(id){if(!confirm('删除？'))return;upd(function(db){db.damageRecords=db.damageRecords.filter(function(d){return d.id!==id})});toast('已删除');rDamage()}
 
 // ===== REPORT =====
-function rReport(){var ym=curYM();var h='<div class="hrow"><label>月份</label><input class="inp" id="repM" type="month" value="'+ym+'" style="max-width:180px" onchange="rReport()"></div>';var m=document.getElementById('repM')?document.getElementById('repM').value||ym:ym;var mr=getMR(m);var mNet=mr.reduce(function(s,r){return s+(r.revenue.netSales||0)},0),mGross=mr.reduce(function(s,r){return s+(r.revenue.grossSales||0)},0),mKit=mr.reduce(function(s,r){return s+(r.revenue.kitchenSales||0)},0),mBar=mr.reduce(function(s,r){return s+(r.revenue.barSales||0)},0),mDel=mr.reduce(function(s,r){return s+(r.delivery.total||0)},0),mCigRev=mr.reduce(function(s,r){return s+(r.revenue.cigarette.total||0)},0),mOther=mr.reduce(function(s,r){return s+(r.revenue.other||0)},0),mDiscount=mr.reduce(function(s,r){return s+(r.revenue.discount||0)},0),mGuests=mr.reduce(function(s,r){return s+(r.guest.count||0)},0),mPos=mr.reduce(function(s,r){return s+(r.payment.pos||0)},0),mCcb=mr.reduce(function(s,r){return s+(r.payment.ccbLife||0)},0),mCash=mr.reduce(function(s,r){return s+(r.payment.cash||0)},0),mMember=mr.reduce(function(s,r){return s+(r.payment.memberCard||0)},0),mTreat=mr.reduce(function(s,r){return s+(r.payment.treat||0)},0),mAr=mr.reduce(function(s,r){return s+(r.payment.ar.total||0)},0),mDelMeituan=mr.reduce(function(s,r){return s+(r.delivery.meituan||0)},0),mDelTaobao=mr.reduce(function(s,r){return s+(r.delivery.taobao||0)},0),mDelJd=mr.reduce(function(s,r){return s+(r.delivery.jd||0)},0);var teaS=DB.teaItems.map(function(item){var mc=invCalcMon(item,'tea',m);return{item:item,revenue:mc.revenue,cost:mc.cost,profit:mc.revenue-mc.cost}}),cigS=DB.cigItems.map(function(item){var mc=invCalcMon(item,'cig',m);return{item:item,revenue:mc.revenue,cost:mc.cost,profit:mc.revenue-mc.cost}}),alcS=DB.alcItems.map(function(item){var mc=invCalcMon(item,'alc',m);return{item:item,revenue:mc.revenue,cost:mc.cost,profit:mc.revenue-mc.cost}});var teaRev=teaS.reduce(function(s,st){return s+st.revenue},0),teaCost=teaS.reduce(function(s,st){return s+st.cost},0),teaProfit=teaRev-teaCost,cigRev=cigS.reduce(function(s,st){return s+st.revenue},0),cigCost=cigS.reduce(function(s,st){return s+st.cost},0),cigProfit=cigRev-cigCost,alcRev=alcS.reduce(function(s,st){return s+st.revenue},0),alcCost=alcS.reduce(function(s,st){return s+st.cost},0),alcProfit=alcRev-alcCost;var mPur=DB.purchases.filter(function(p){return p.date.startsWith(m)}),purTotal=0,retTotal=0,purBySec={};mPur.forEach(function(p){p.items.forEach(function(item){var src=item.source||p.source||'外购',sec=item.section||'其他';if(src==='退货')retTotal+=item.total;else{purTotal+=item.total;if(!purBySec[sec])purBySec[sec]=0;purBySec[sec]+=item.total}})});var netPur=purTotal-retTotal;var mExp=DB.expenses.filter(function(e){return e.date.startsWith(m)}),expTotal=mExp.reduce(function(s,e){return s+e.amount},0),expByCat={};mExp.forEach(function(e){if(!expByCat[e.category])expByCat[e.category]=0;expByCat[e.category]+=e.amount});var kitCost=purBySec['厨房']||0,barCost=purBySec['吧台']||0,outCost=purBySec['外场']||0;var barNoTea=mBar-teaRev;if(barNoTea<0)barNoTea=mBar;var otherCost=netPur-kitCost-barCost-outCost;if(otherCost<0)otherCost=0;var grossProfit=mNet-netPur,grossMargin=mNet>0?grossProfit/mNet*100:0,operProfit=grossProfit-expTotal,operMargin=mNet>0?operProfit/mNet*100:0;var barGP=barNoTea-barCost,teaGP=teaProfit,cigGP=cigProfit,alcGP=alcProfit,delGP=mDel;var kitGP=mKit-kitCost;if(kitGP<0)kitGP=mKit*0.5;var otherGP=mOther-otherCost;if(otherGP<0)otherGP=mOther*0.5;var avgSpend=mGuests>0?mNet/mGuests:0,daysReported=mr.length||1;var yy=m.split('-')[0],mm=m.split('-')[1];h+='<div class="sec" style="text-align:center;margin-bottom:4px"><div style="font-size:1.2rem;font-weight:700;color:var(--ac);letter-spacing:.05em">岸香咖啡弘皓大厦店</div><div style="font-size:.78rem;color:var(--tx-m);letter-spacing:.1em">FINANCIAL REPORT · '+yy+'.'+mm+'</div></div>';h+='<div class="cards" style="margin-bottom:20px">';h+='<div class="card"><div class="card-l">总流水</div><div class="card-v ac">'+fmtC(mGross)+'</div></div>';h+='<div class="card"><div class="card-l">总实收</div><div class="card-v ac">'+fmtC(mNet)+'</div></div>';h+='<div class="card"><div class="card-l">总毛利</div><div class="card-v gn">'+fmtC(grossProfit)+'</div></div>';h+='<div class="card"><div class="card-l">毛利率</div><div class="card-v gn">'+grossMargin.toFixed(1)+'%</div></div>';h+='<div class="card"><div class="card-l">营业利润</div><div class="card-v '+(operProfit>=0?'gn':'rd')+'">'+fmtC(operProfit)+'</div></div>';h+='<div class="card"><div class="card-l">到店人数</div><div class="card-v">'+mGuests+'</div></div>';h+='</div>';h+='<div class="rep-nav" id="repNav" style="display:flex;gap:0;overflow-x:auto;margin-bottom:20px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);scrollbar-width:none"></div>';h+='<div id="repBody"></div>';setMain('财务报告',h);var tabs=[{id:'profit',label:'利润表'},{id:'revenue',label:'营收总表'},{id:'cost',label:'成本费用'},{id:'catgp',label:'分类毛利'}];if(cigRev>0)tabs.push({id:'cig',label:'香烟'});if(teaRev>0)tabs.push({id:'tea',label:'茗茶'});if(alcRev>0)tabs.push({id:'alc',label:'酒类'});tabs.push({id:'daily',label:'每日营收'},{id:'guest',label:'客情包厢'});var navH='';tabs.forEach(function(t,i){navH+='<button class="rep-tab'+(i===0?' active':'')+'" data-tab="'+t.id+'" style="flex-shrink:0;padding:10px 16px;font-size:.76rem;color:var(--tx-m);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .2s;white-space:nowrap">'+t.label+'</button>'});$id('repNav').innerHTML=navH;function switchRepTab(id){document.querySelectorAll('.rep-tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===id)});document.querySelectorAll('.rep-tab').forEach(function(b){b.style.color=b.classList.contains('active')?'var(--ac)':'var(--tx-m)';b.style.borderBottomColor=b.classList.contains('active')?'var(--ac)':'transparent'});renderRepSection(id)}document.querySelectorAll('.rep-tab').forEach(function(b){b.onclick=function(){switchRepTab(b.dataset.tab)}});
-function renderRepSection(id){
-    var s=$id('repBody');if(!s)return;
-    // 缓存数据给图表使用
-    window._repData = {
-        net:mNet, netPur:netPur, gp:grossProfit, expTotal:expTotal, op:operProfit,
-        kit:mKit, bar:mBar, del:mDel, cig:cigRev, alc:alcRev, other:mOther,
-        pos:mPos, ccb:mCcb, cash:mCash, member:mMember, ar:mAr,
-        purBySec:purBySec, expByCat:expByCat,
-        kitGP:kitGP, barGP:barGP, teaGP:teaGP, delGP:delGP, cigGP:cigGP, alcGP:alcGP,
-        barNoTea:barNoTea, tea:teaRev,
-        cigS:cigS, teaS:teaS, alcS:alcS,
-        mr:mr
-    };
-    var sh='';if(id==='profit'){sh+=renderProfitTable(mNet,mGross,mDiscount,kitCost,barCost,outCost,teaCost,cigCost,alcCost,otherCost,netPur,expTotal,expByCat,grossProfit,grossMargin,operProfit,operMargin)}else if(id==='revenue'){sh+=renderRevenueSection(mNet,mGross,mDiscount,mKit,mBar,mDel,mCigRev,alcRev,mOther,mPos,mCcb,mCash,mMember,mTreat,mAr,mDelMeituan,mDelTaobao,mDelJd)}else if(id==='cost'){sh+=renderCostSection(purBySec,netPur,kitCost,barCost,outCost,teaCost,cigCost,alcCost,expByCat,expTotal)}else if(id==='catgp'){sh+=renderCatGPSection(mKit,mBar,barNoTea,teaRev,mDel,mCigRev,alcRev,kitCost,barCost,teaCost,cigCost,alcCost,kitGP,barGP,teaGP,delGP,cigGP,alcGP)}else if(id==='cig'){sh+=renderCigSection(cigS,cigRev,cigCost,cigProfit,m)}else if(id==='tea'){sh+=renderTeaSection(teaS,teaRev,teaCost,teaProfit,m)}else if(id==='alc'){sh+=renderAlcSection(alcS,alcRev,alcCost,alcProfit,m)}else if(id==='daily'){sh+=renderDailySection(mr,mNet,mGuests,daysReported)}else if(id==='guest'){sh+=renderGuestSection(mr,mGuests,m)}
-window._repData={net:mNet,netPur:netPur,gp:grossProfit,expTotal:expTotal,op:operProfit,kit:mKit,bar:mBar,del:mDel,cig:cigRev,alc:alcRev,other:mOther,pos:mPos,ccb:mCcb,cash:mCash,member:mMember,ar:mAr,purBySec:purBySec,expByCat:expByCat,kitGP:kitGP,barGP:barGP,teaGP:teaGP,delGP:delGP,cigGP:cigGP,alcGP:alcGP,barNoTea:barNoTea,tea:teaRev,cigS:cigS,teaS:teaS,alcS:alcS,mr:mr};
-s.innerHTML=sh;setTimeout(function(){initRepCharts(id)},100)}switchRepTab('profit')}
+function rReport() {
+    var ym = curYM();
 
-function renderProfitTable(net,gross,discount,kitC,barC,outC,teaC,cigC,alcC,otherC,netPur,expTotal,expByCat,gp,gm,op,om){var ym=document.getElementById('repM')?document.getElementById('repM').value:curYM();var yy=ym.split('-')[0],mm=parseInt(ym.split('-')[1]);var rows=[{l:'营业收入（实收）',v:net,n:'流水'+fmtC(gross)+' 减折扣'+fmtC(discount)},{l:'减：营业成本',v:netPur,n:'净采购'},{l:'  厨房采购',v:kitC,n:''},{l:'  吧台采购',v:barC,n:''},{l:'  外场采购',v:outC,n:''},{l:'  茗茶FIFO成本',v:teaC,n:''},{l:'  香烟销售成本',v:cigC,n:''},{l:'  酒类FIFO成本',v:alcC,n:''}];if(otherC>0)rows.push({l:'  其他采购',v:otherC,n:''});rows.push({l:'毛利',v:gp,n:'毛利率 '+gm.toFixed(1)+'%'},{l:'减：营业费用',v:expTotal,n:''});Object.keys(expByCat).forEach(function(cat){rows.push({l:'  '+cat,v:expByCat[cat],n:''})});rows.push({l:'营业利润',v:op,n:'利润率 '+om.toFixed(1)+'%'});var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">一、利润表</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">'+mm+'月实现营收'+fmtC(net)+'元，营业成本'+fmtC(netPur)+'元，毛利'+fmtC(gp)+'元（'+gm.toFixed(1)+'%）。扣除费用'+fmtC(expTotal)+'元后，营业利润'+fmtC(op)+'元，利润率'+om.toFixed(1)+'%。</div></div>';h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px"><canvas id="repChart" height="160"></canvas></div>';h+='<div class="tw"><table><tr><th>项目</th><th class="nr">金额（元）</th><th>备注</th></tr>';rows.forEach(function(r){var isTotal=r.l==='毛利'||r.l==='营业利润';h+='<tr'+(isTotal?' style="background:var(--card-h)"':'')+'><td'+(isTotal?' style="font-weight:600"':'')+'>'+r.l+'</td><td class="nr" style="'+(isTotal?'font-weight:600;color:'+(r.v>=0?'var(--gn)':'var(--rd)'):'')+'">'+fmtC(r.v)+'</td><td style="font-size:.72rem;color:var(--tx-m)">'+r.n+'</td></tr>'});h+='</table></div>';return h}
-function renderRevenueSection(net,gross,discount,kit,bar,del,cig,alc,other,pos,ccb,cash,member,treat,ar,delMt,delTb,delJd){var total=net||1;var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">二、营收总表</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">总流水'+fmtC(gross)+'元，折扣'+fmtC(discount)+'元（'+(gross>0?(discount/gross*100).toFixed(1):'0')+'%），实收'+fmtC(net)+'元。厨房'+(net>0?(kit/net*100).toFixed(1):'0')+'%、吧台'+(net>0?(bar/net*100).toFixed(1):'0')+'%、外卖'+(net>0?(del/net*100).toFixed(1):'0')+'%。</div></div>';h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px"><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px"><canvas id="repChart1" height="250"></canvas></div><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px"><canvas id="repChart2" height="250"></canvas></div></div>';h+='<div class="tw"><table><tr><th>收入分类</th><th class="nr">金额（元）</th><th class="nr">占比</th></tr>';var items=[['厨房',kit],['吧台（含茗茶）',bar],['外卖',del],['香烟',cig],['其他',other]];if(alc>0)items.splice(4,0,['酒类',alc]);items.push(['合计',total]);items.forEach(function(it){var pct=net>0?(it[1]/total*100).toFixed(1):'0';var isTotal=it[0]==='合计';h+='<tr'+(isTotal?' style="background:var(--card-h)"':'')+'><td'+(isTotal?' style="font-weight:600"':'')+'>'+it[0]+'</td><td class="nr"'+(isTotal?' style="font-weight:600"':'')+'>'+fmtC(it[1])+'</td><td class="nr">'+pct+'%</td></tr>'});h+='</table></div>';h+='<div class="sec-head" style="margin-top:20px"><h4 style="font-size:.82rem;color:var(--ac);margin-bottom:6px">支付渠道</h4></div>';h+='<div class="tw"><table><tr><th>渠道</th><th class="nr">金额（元）</th><th class="nr">占比</th></tr>';var payItems=[['智能POS机',pos],['建行生活',ccb],['现金',cash],['会员刷卡',member],['招待',treat],['外卖',del],['应收账款',ar]];payItems.push(['合计',pos+ccb+cash+member+treat+del+ar]);payItems.forEach(function(it){var pct=net>0?(it[1]/(pos+ccb+cash+member+treat+del+ar)*100).toFixed(1):'0';var isTotal=it[0]==='合计';h+='<tr'+(isTotal?' style="background:var(--card-h)"':'')+'><td'+(isTotal?' style="font-weight:600"':'')+'>'+it[0]+'</td><td class="nr"'+(isTotal?' style="font-weight:600"':'')+'>'+fmtC(it[1])+'</td><td class="nr">'+pct+'%</td></tr>'});h+='</table></div>';return h}
+    // 月份选择器
+    var h = '<div class="hrow"><label>月份</label>';
+    h += '<input class="inp" id="repM" type="month" value="' + ym + '" style="max-width:180px" onchange="rReport()">';
+    h += '</div>';
+
+    var m = document.getElementById('repM') ? document.getElementById('repM').value || ym : ym;
+    var mr = getMR(m);
+
+    // ===== 营收汇总 =====
+    var mNet     = mr.reduce(function(s, r) { return s + (r.revenue.netSales || 0); }, 0);
+    var mGross   = mr.reduce(function(s, r) { return s + (r.revenue.grossSales || 0); }, 0);
+    var mKit     = mr.reduce(function(s, r) { return s + (r.revenue.kitchenSales || 0); }, 0);
+    var mBar     = mr.reduce(function(s, r) { return s + (r.revenue.barSales || 0); }, 0);
+    var mDel     = mr.reduce(function(s, r) { return s + (r.delivery.total || 0); }, 0);
+    var mCigRev  = mr.reduce(function(s, r) { return s + (r.revenue.cigarette.total || 0); }, 0);
+    var mOther   = mr.reduce(function(s, r) { return s + (r.revenue.other || 0); }, 0);
+    var mDiscount= mr.reduce(function(s, r) { return s + (r.revenue.discount || 0); }, 0);
+    var mGuests  = mr.reduce(function(s, r) { return s + (r.guest.count || 0); }, 0);
+
+    // ===== 支付方式汇总 =====
+    var mPos     = mr.reduce(function(s, r) { return s + (r.payment.pos || 0); }, 0);
+    var mCcb     = mr.reduce(function(s, r) { return s + (r.payment.ccbLife || 0); }, 0);
+    var mCash    = mr.reduce(function(s, r) { return s + (r.payment.cash || 0); }, 0);
+    var mMember  = mr.reduce(function(s, r) { return s + (r.payment.memberCard || 0); }, 0);
+    var mTreat   = mr.reduce(function(s, r) { return s + (r.payment.treat || 0); }, 0);
+    var mAr      = mr.reduce(function(s, r) { return s + (r.payment.ar.total || 0); }, 0);
+
+    // ===== 外卖渠道汇总 =====
+    var mDelMeituan = mr.reduce(function(s, r) { return s + (r.delivery.meituan || 0); }, 0);
+    var mDelTaobao  = mr.reduce(function(s, r) { return s + (r.delivery.taobao || 0); }, 0);
+    var mDelJd      = mr.reduce(function(s, r) { return s + (r.delivery.jd || 0); }, 0);
+
+    // ===== 库存销售统计 =====
+    var teaS = DB.teaItems.map(function(item) {
+        var mc = invCalcMon(item, 'tea', m);
+        return { item: item, revenue: mc.revenue, cost: mc.cost, profit: mc.revenue - mc.cost };
+    });
+    var cigS = DB.cigItems.map(function(item) {
+        var mc = invCalcMon(item, 'cig', m);
+        return { item: item, revenue: mc.revenue, cost: mc.cost, profit: mc.revenue - mc.cost };
+    });
+    var alcS = DB.alcItems.map(function(item) {
+        var mc = invCalcMon(item, 'alc', m);
+        return { item: item, revenue: mc.revenue, cost: mc.cost, profit: mc.revenue - mc.cost };
+    });
+
+    // 库存销售汇总
+    var teaRev   = teaS.reduce(function(s, st) { return s + st.revenue; }, 0);
+    var teaCost  = teaS.reduce(function(s, st) { return s + st.cost; }, 0);
+    var teaProfit = teaRev - teaCost;
+
+    var cigRev   = cigS.reduce(function(s, st) { return s + st.revenue; }, 0);
+    var cigCost  = cigS.reduce(function(s, st) { return s + st.cost; }, 0);
+    var cigProfit = cigRev - cigCost;
+
+    var alcRev   = alcS.reduce(function(s, st) { return s + st.revenue; }, 0);
+    var alcCost  = alcS.reduce(function(s, st) { return s + st.cost; }, 0);
+    var alcProfit = alcRev - alcCost;
+
+    // ===== 采购汇总 =====
+    var mPur     = DB.purchases.filter(function(p) { return p.date.startsWith(m); });
+    var purTotal = 0;
+    var retTotal = 0;
+    var purBySec = {};
+    mPur.forEach(function(p) {
+        p.items.forEach(function(item) {
+            var src = item.source || p.source || '外购';
+            var sec = item.section || '其他';
+            if (src === '退货') {
+                retTotal += item.total;
+            } else {
+                purTotal += item.total;
+                if (!purBySec[sec]) purBySec[sec] = 0;
+                purBySec[sec] += item.total;
+            }
+        });
+    });
+    var netPur = purTotal - retTotal;
+
+    // ===== 费用汇总 =====
+    var mExp     = DB.expenses.filter(function(e) { return e.date.startsWith(m); });
+    var expTotal = mExp.reduce(function(s, e) { return s + e.amount; }, 0);
+    var expByCat = {};
+    mExp.forEach(function(e) {
+        if (!expByCat[e.category]) expByCat[e.category] = 0;
+        expByCat[e.category] += e.amount;
+    });
+
+    // ===== 分区域成本 =====
+    var kitCost = purBySec['厨房'] || 0;
+    var barCost = purBySec['吧台'] || 0;
+    var outCost = purBySec['外场'] || 0;
+
+    // 吧台扣除茗茶
+    var barNoTea = mBar - teaRev;
+    if (barNoTea < 0) barNoTea = mBar;
+
+    // 其他成本
+    var otherCost = netPur - kitCost - barCost - outCost;
+    if (otherCost < 0) otherCost = 0;
+
+    // ===== 利润计算 =====
+    var grossProfit = mNet - netPur;
+    var grossMargin = mNet > 0 ? grossProfit / mNet * 100 : 0;
+    var operProfit  = grossProfit - expTotal;
+    var operMargin  = mNet > 0 ? operProfit / mNet * 100 : 0;
+
+    // 分类毛利
+    var barGP   = barNoTea - barCost;
+    var teaGP   = teaProfit;
+    var cigGP   = cigProfit;
+    var alcGP   = alcProfit;
+    var delGP   = mDel;
+
+    var kitGP = mKit - kitCost;
+    if (kitGP < 0) kitGP = mKit * 0.5;
+
+    var otherGP = mOther - otherCost;
+    if (otherGP < 0) otherGP = mOther * 0.5;
+
+    var avgSpend     = mGuests > 0 ? mNet / mGuests : 0;
+    var daysReported = mr.length || 1;
+
+    var yy = m.split('-')[0];
+    var mm = m.split('-')[1];
+
+    // ========================================
+    // 页面标题
+    // ========================================
+    h += '<div class="sec" style="text-align:center;margin-bottom:4px">';
+    h += '<div style="font-size:1.2rem;font-weight:700;color:var(--ac);letter-spacing:.05em">岸香咖啡弘皓大厦店</div>';
+    h += '<div style="font-size:.78rem;color:var(--tx-m);letter-spacing:.1em">FINANCIAL REPORT · ' + yy + '.' + mm + '</div>';
+    h += '</div>';
+
+    // ========================================
+    // 核心指标卡片
+    // ========================================
+    h += '<div class="cards" style="margin-bottom:20px">';
+    h += '<div class="card"><div class="card-l">总流水</div><div class="card-v ac">' + fmtC(mGross) + '</div></div>';
+    h += '<div class="card"><div class="card-l">总实收</div><div class="card-v ac">' + fmtC(mNet) + '</div></div>';
+    h += '<div class="card"><div class="card-l">总毛利</div><div class="card-v gn">' + fmtC(grossProfit) + '</div></div>';
+    h += '<div class="card"><div class="card-l">毛利率</div><div class="card-v gn">' + grossMargin.toFixed(1) + '%</div></div>';
+    h += '<div class="card"><div class="card-l">营业利润</div><div class="card-v ' + (operProfit >= 0 ? 'gn' : 'rd') + '">' + fmtC(operProfit) + '</div></div>';
+    h += '<div class="card"><div class="card-l">到店人数</div><div class="card-v">' + mGuests + '</div></div>';
+    h += '</div>';
+
+    // ========================================
+    // 子标签导航栏
+    // ========================================
+    h += '<div class="rep-nav" id="repNav" style="display:flex;gap:0;overflow-x:auto;margin-bottom:20px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);scrollbar-width:none"></div>';
+    h += '<div id="repBody"></div>';
+
+    setMain('财务报告', h);
+
+    // ========================================
+    // 子标签配置
+    // ========================================
+    var tabs = [
+        { id: 'profit',  label: '利润表' },
+        { id: 'revenue', label: '营收总表' },
+        { id: 'cost',    label: '成本费用' },
+        { id: 'catgp',   label: '分类毛利' }
+    ];
+
+    if (cigRev > 0) tabs.push({ id: 'cig', label: '香烟' });
+    if (teaRev > 0) tabs.push({ id: 'tea', label: '茗茶' });
+    if (alcRev > 0) tabs.push({ id: 'alc', label: '酒类' });
+
+    tabs.push({ id: 'daily', label: '每日营收' });
+    tabs.push({ id: 'guest', label: '客情包厢' });
+
+    // ========================================
+    // 渲染子标签
+    // ========================================
+    var navH = '';
+    tabs.forEach(function(t, i) {
+        navH += '<button class="rep-tab' + (i === 0 ? ' active' : '') + '" data-tab="' + t.id + '" ';
+        navH += 'style="flex-shrink:0;padding:10px 16px;font-size:.76rem;color:var(--tx-m);';
+        navH += 'background:none;border:none;border-bottom:2px solid transparent;';
+        navH += 'cursor:pointer;transition:all .2s;white-space:nowrap">';
+        navH += t.label + '</button>';
+    });
+    $id('repNav').innerHTML = navH;
+
+    // ========================================
+    // 子标签切换逻辑
+    // ========================================
+    function switchRepTab(id) {
+        document.querySelectorAll('.rep-tab').forEach(function(b) {
+            b.classList.toggle('active', b.dataset.tab === id);
+        });
+        document.querySelectorAll('.rep-tab').forEach(function(b) {
+            b.style.color = b.classList.contains('active') ? 'var(--ac)' : 'var(--tx-m)';
+            b.style.borderBottomColor = b.classList.contains('active') ? 'var(--ac)' : 'transparent';
+        });
+        renderRepSection(id);
+    }
+
+        document.querySelectorAll('.rep-tab').forEach(function(b) {
+        b.onclick = function() { switchRepTab(b.dataset.tab); };
+    });
+
+    // ========================================
+    // 渲染子标签内容（在rReport内部，可以访问所有变量）
+    // ========================================
+    function renderRepSection(id) {
+        var s = $id('repBody');
+        if (!s) return;
+
+        // 缓存数据给图表使用
+        window._repData = {
+            net: mNet, netPur: netPur, gp: grossProfit,
+            expTotal: expTotal, op: operProfit,
+            kit: mKit, bar: mBar, del: mDel,
+            cig: cigRev, alc: alcRev, other: mOther,
+            pos: mPos, ccb: mCcb, cash: mCash,
+            member: mMember, ar: mAr,
+            purBySec: purBySec, expByCat: expByCat,
+            kitGP: kitGP, barGP: barGP, teaGP: teaGP,
+            delGP: delGP, cigGP: cigGP, alcGP: alcGP,
+            barNoTea: barNoTea, tea: teaRev,
+            cigS: cigS, teaS: teaS, alcS: alcS,
+            mr: mr
+        };
+
+        var sh = '';
+
+        if (id === 'profit') {
+            sh += renderProfitTable(mNet, mGross, mDiscount, kitCost, barCost, outCost, teaCost, cigCost, alcCost, otherCost, netPur, expTotal, expByCat, grossProfit, grossMargin, operProfit, operMargin);
+        } else if (id === 'revenue') {
+            sh += renderRevenueSection(mNet, mGross, mDiscount, mKit, mBar, mDel, mCigRev, alcRev, mOther, mPos, mCcb, mCash, mMember, mTreat, mAr, mDelMeituan, mDelTaobao, mDelJd);
+        } else if (id === 'cost') {
+            sh += renderCostSection(purBySec, netPur, kitCost, barCost, outCost, teaCost, cigCost, alcCost, expByCat, expTotal);
+        } else if (id === 'catgp') {
+            sh += renderCatGPSection(mKit, mBar, barNoTea, teaRev, mDel, mCigRev, alcRev, kitCost, barCost, teaCost, cigCost, alcCost, kitGP, barGP, teaGP, delGP, cigGP, alcGP);
+        } else if (id === 'cig') {
+            sh += renderCigSection(cigS, cigRev, cigCost, cigProfit, m);
+        } else if (id === 'tea') {
+            sh += renderTeaSection(teaS, teaRev, teaCost, teaProfit, m);
+        } else if (id === 'alc') {
+            sh += renderAlcSection(alcS, alcRev, alcCost, alcProfit, m);
+        } else if (id === 'daily') {
+            sh += renderDailySection(mr, mNet, mGuests, daysReported);
+        } else if (id === 'guest') {
+            sh += renderGuestSection(mr, mGuests, m);
+        }
+
+        s.innerHTML = sh;
+        setTimeout(function() { initRepCharts(id); }, 100);
+    }
+}
+
+
+function renderProfitTable(net, gross, discount, kitC, barC, outC, teaC, cigC, alcC, otherC, netPur, expTotal, expByCat, gp, gm, op, om) {
+
+    var ym = document.getElementById('repM') ? document.getElementById('repM').value : curYM();
+    var yy = ym.split('-')[0];
+    var mm = parseInt(ym.split('-')[1]);
+
+    // ===== 利润表数据行 =====
+    var rows = [
+        { l: '营业收入（实收）', v: net,    n: '流水' + fmtC(gross) + ' 减折扣' + fmtC(discount) },
+        { l: '减：营业成本',     v: netPur, n: '净采购' },
+        { l: '  厨房采购',       v: kitC,   n: '' },
+        { l: '  吧台采购',       v: barC,   n: '' },
+        { l: '  外场采购',       v: outC,   n: '' },
+        { l: '  茗茶FIFO成本',   v: teaC,   n: '' },
+        { l: '  香烟销售成本',   v: cigC,   n: '' },
+        { l: '  酒类FIFO成本',   v: alcC,   n: '' }
+    ];
+
+    if (otherC > 0) {
+        rows.push({ l: '  其他采购', v: otherC, n: '' });
+    }
+
+    rows.push({ l: '毛利', v: gp, n: '毛利率 ' + gm.toFixed(1) + '%' });
+    rows.push({ l: '减：营业费用', v: expTotal, n: '' });
+
+    // 费用分类明细
+    Object.keys(expByCat).forEach(function(cat) {
+        rows.push({ l: '  ' + cat, v: expByCat[cat], n: '' });
+    });
+
+    rows.push({ l: '营业利润', v: op, n: '利润率 ' + om.toFixed(1) + '%' });
+
+    // ===== 标题区域 =====
+    var h = '<div class="sec-head">';
+    h += '<h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">一、利润表</h4>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">';
+    h += mm + '月实现营收' + fmtC(net) + '元，';
+    h += '营业成本' + fmtC(netPur) + '元，';
+    h += '毛利' + fmtC(gp) + '元（' + gm.toFixed(1) + '%）。';
+    h += '扣除费用' + fmtC(expTotal) + '元后，';
+    h += '营业利润' + fmtC(op) + '元，利润率' + om.toFixed(1) + '%。';
+    h += '</div>';
+    h += '</div>';
+
+    // ===== 图表区域 =====
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">';
+    h += '<canvas id="repChart" height="160"></canvas>';
+    h += '</div>';
+
+    // ===== 表格 =====
+    h += '<div class="tw"><table>';
+    h += '<tr><th>项目</th><th class="nr">金额（元）</th><th>备注</th></tr>';
+
+    rows.forEach(function(r) {
+        var isTotal = (r.l === '毛利' || r.l === '营业利润');
+
+        h += '<tr' + (isTotal ? ' style="background:var(--card-h)"' : '') + '>';
+        h += '<td' + (isTotal ? ' style="font-weight:600"' : '') + '>' + r.l + '</td>';
+        h += '<td class="nr" style="' + (isTotal ? 'font-weight:600;color:' + (r.v >= 0 ? 'var(--gn)' : 'var(--rd)') : '') + '">' + fmtC(r.v) + '</td>';
+        h += '<td style="font-size:.72rem;color:var(--tx-m)">' + r.n + '</td>';
+        h += '</tr>';
+    });
+
+    h += '</table></div>';
+
+    return h;
+}
+function renderRevenueSection(net, gross, discount, kit, bar, del, cig, alc, other, pos, ccb, cash, member, treat, ar, delMt, delTb, delJd) {
+
+    var total = net || 1;
+
+    // ===== 标题区域 =====
+    var h = '<div class="sec-head">';
+    h += '<h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">二、营收总表</h4>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">';
+    h += '总流水' + fmtC(gross) + '元，';
+    h += '折扣' + fmtC(discount) + '元（' + (gross > 0 ? (discount / gross * 100).toFixed(1) : '0') + '%），';
+    h += '实收' + fmtC(net) + '元。';
+    h += '厨房' + (net > 0 ? (kit / net * 100).toFixed(1) : '0') + '%、';
+    h += '吧台' + (net > 0 ? (bar / net * 100).toFixed(1) : '0') + '%、';
+    h += '外卖' + (net > 0 ? (del / net * 100).toFixed(1) : '0') + '%。';
+    h += '</div>';
+    h += '</div>';
+
+    // ===== 图表区域（饼图 x2）=====
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px">';
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px">';
+    h += '<canvas id="repChart1" height="250"></canvas>';
+    h += '</div>';
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px">';
+    h += '<canvas id="repChart2" height="250"></canvas>';
+    h += '</div>';
+    h += '</div>';
+
+    // ===== 收入分类表格 =====
+    h += '<div class="tw"><table>';
+    h += '<tr><th>收入分类</th><th class="nr">金额（元）</th><th class="nr">占比</th></tr>';
+
+    var items = [
+        ['厨房', kit],
+        ['吧台（含茗茶）', bar],
+        ['外卖', del],
+        ['香烟', cig],
+        ['其他', other]
+    ];
+
+    if (alc > 0) {
+        items.splice(4, 0, ['酒类', alc]);
+    }
+
+    items.push(['合计', total]);
+
+    items.forEach(function(it) {
+        var pct = net > 0 ? (it[1] / total * 100).toFixed(1) : '0';
+        var isTotal = it[0] === '合计';
+
+        h += '<tr' + (isTotal ? ' style="background:var(--card-h)"' : '') + '>';
+        h += '<td' + (isTotal ? ' style="font-weight:600"' : '') + '>' + it[0] + '</td>';
+        h += '<td class="nr"' + (isTotal ? ' style="font-weight:600"' : '') + '>' + fmtC(it[1]) + '</td>';
+        h += '<td class="nr">' + pct + '%</td>';
+        h += '</tr>';
+    });
+
+    h += '</table></div>';
+
+    // ===== 支付渠道表格 =====
+    h += '<div class="sec-head" style="margin-top:20px">';
+    h += '<h4 style="font-size:.82rem;color:var(--ac);margin-bottom:6px">支付渠道</h4>';
+    h += '</div>';
+
+    h += '<div class="tw"><table>';
+    h += '<tr><th>渠道</th><th class="nr">金额（元）</th><th class="nr">占比</th></tr>';
+
+    var payTotal = pos + ccb + cash + member + treat + del + ar;
+
+    var payItems = [
+        ['智能POS机', pos],
+        ['建行生活',  ccb],
+        ['现金',      cash],
+        ['会员刷卡',  member],
+        ['招待',      treat],
+        ['外卖',      del],
+        ['应收账款',  ar]
+    ];
+
+    payItems.push(['合计', payTotal]);
+
+    payItems.forEach(function(it) {
+        var pct = payTotal > 0 ? (it[1] / payTotal * 100).toFixed(1) : '0';
+        var isTotal = it[0] === '合计';
+
+        h += '<tr' + (isTotal ? ' style="background:var(--card-h)"' : '') + '>';
+        h += '<td' + (isTotal ? ' style="font-weight:600"' : '') + '>' + it[0] + '</td>';
+        h += '<td class="nr"' + (isTotal ? ' style="font-weight:600"' : '') + '>' + fmtC(it[1]) + '</td>';
+        h += '<td class="nr">' + pct + '%</td>';
+        h += '</tr>';
+    });
+
+    h += '</table></div>';
+
+    return h;
+}
 
 function renderCostSection(purBySec,netPur,kitC,barC,outC,teaC,cigC,alcC,expByCat,expTotal){var total=netPur+expTotal;var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">三、成本费用明细</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">采购总成本'+fmtC(netPur)+'元，费用'+fmtC(expTotal)+'元，合计'+fmtC(total)+'元。</div></div>';h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px"><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px"><canvas id="repChart" height="200"></canvas></div><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px"><canvas id="repChart2" height="200"></canvas></div></div>';h+='<div class="tw"><table><tr><th>费用归属</th><th class="nr">金额（元）</th><th class="nr">占比</th></tr>';var items=[['厨房采购',kitC],['吧台采购',barC],['外场采购',outC],['茗茶成本',teaC],['香烟成本',cigC]];if(alcC>0)items.push(['酒类成本',alcC]);Object.keys(expByCat).forEach(function(cat){items.push([cat,expByCat[cat]])});items.push(['合计',total]);items.forEach(function(it){var pct=total>0?(it[1]/total*100).toFixed(1):'0';var isTotal=it[0]==='合计';h+='<tr'+(isTotal?' style="background:var(--card-h)"':'')+'><td'+(isTotal?' style="font-weight:600"':'')+'>'+it[0]+'</td><td class="nr"'+(isTotal?' style="font-weight:600"':'')+'>'+fmtC(it[1])+'</td><td class="nr">'+pct+'%</td></tr>'});h+='</table></div>';return h}
 function renderCatGPSection(kit,bar,barNoTea,tea,del,cig,alc,kitC,barC,teaC,cigC,alcC,kitGP,barGP,teaGP,delGP,cigGP,alcGP){var totalRev=kit+bar+del+cig+alc;var totalGP=kitGP+barGP+teaGP+delGP+cigGP+alcGP;var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">四、分类毛利分析</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">厨房毛利'+fmtC(kitGP)+'元，吧台'+fmtC(barGP)+'元，茗茶'+fmtC(teaGP)+'元（最高），外卖'+fmtC(delGP)+'元，香烟'+fmtC(cigGP)+'元。总毛利'+fmtC(totalGP)+'元。</div></div>';h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px"><canvas id="repChart" height="280"></canvas></div>';h+='<div class="tw"><table><tr><th>类别</th><th class="nr">收入</th><th class="nr">成本</th><th class="nr">毛利</th><th class="nr">毛利率</th></tr>';var items=[['厨房',kit,kitC,kitGP],['吧台（不含茗茶）',barNoTea,barC,barGP],['茗茶',tea,teaC,teaGP],['外卖',del,0,delGP],['香烟',cig,cigC,cigGP]];if(alc>0)items.push(['酒类',alc,alcC,alcGP]);items.push(['合计',totalRev,totalRev-totalGP,totalGP]);items.forEach(function(it){var margin=it[1]>0?(it[3]/it[1]*100).toFixed(1):'0';var isTotal=it[0]==='合计';h+='<tr'+(isTotal?' style="background:var(--card-h)"':'')+'><td'+(isTotal?' style="font-weight:600"':'')+'>'+it[0]+'</td><td class="nr">'+fmtC(it[1])+'</td><td class="nr">'+fmtC(it[2])+'</td><td class="nr" style="color:'+(it[3]>=0?'var(--gn)':'var(--rd)')+';font-weight:600">'+fmtC(it[3])+'</td><td class="nr">'+margin+'%</td></tr>'});h+='</table></div>';return h}
-function renderCigSection(stats,rev,cost,profit,ym){var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">五、香烟进销存及毛利</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">本月销售'+stats.reduce(function(s,st){var q=st.item.sales.filter(function(ss){return ss.date.startsWith(ym)}).reduce(function(a,ss){return a+(ss.qty||0)},0);return s+q},0)+'包，销售额'+fmtC(rev)+'元，成本'+fmtC(cost)+'元，毛利'+fmtC(profit)+'元（'+(rev>0?(profit/rev*100).toFixed(1):'0')+'%）。</div></div>';h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px"><canvas id="repChart" height="220"></canvas></div>';h+='<div class="tw"><table><tr><th>品名</th><th class="nr">期初</th><th class="nr">入库</th><th class="nr">销售</th><th class="nr">结存</th><th class="nr">销售额</th><th class="nr">成本</th><th class="nr">毛利</th><th class="nr">毛利率</th></tr>';stats.forEach(function(st){var item=st.item,c=invCalc(item,'cig');var purch=0,sold=0;item.purchases.filter(function(p){return p.date.startsWith(ym)}).forEach(function(p){if(p.qty>0)purch+=p.qty;else sold+=Math.abs(p.qty)});item.sales.filter(function(s){return s.date.startsWith(ym)}).forEach(function(s){sold+=s.qty||0});var margin=st.revenue>0?(st.profit/st.revenue*100).toFixed(1):'0';h+='<tr><td>'+item.name+'</td><td class="nr">'+parseInt(item.openingStock||0)+'</td><td class="nr">'+purch+'</td><td class="nr">'+sold+'</td><td class="nr">'+c.stock+'</td><td class="nr">'+fmtC(st.revenue)+'</td><td class="nr">'+fmtC(st.cost)+'</td><td class="nr" style="color:'+(st.profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(st.profit)+'</td><td class="nr">'+margin+'%</td></tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td></td><td></td><td></td><td></td><td class="nr" style="font-weight:600">'+fmtC(rev)+'</td><td class="nr" style="font-weight:600">'+fmtC(cost)+'</td><td class="nr" style="font-weight:600;color:'+(profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(profit)+'</td><td class="nr" style="font-weight:600">'+(rev>0?(profit/rev*100).toFixed(1):'0')+'%</td></tr>';h+='</table></div>';return h}
+function renderCigSection(stats, rev, cost, profit, ym) {
+
+    // 本月销售总包数
+    var totalSold = stats.reduce(function(s, st) {
+        var q = st.item.sales
+            .filter(function(ss) { return ss.date.startsWith(ym); })
+            .reduce(function(a, ss) { return a + (ss.qty || 0); }, 0);
+        return s + q;
+    }, 0);
+
+    var h = '';
+
+    // 标题区域
+    h += '<div class="sec-head">';
+    h += '<h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">五、香烟进销存及毛利</h4>';
+    h += '<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">';
+    h += '本月销售' + totalSold + '包，';
+    h += '销售额' + fmtC(rev) + '元，';
+    h += '成本' + fmtC(cost) + '元，';
+    h += '毛利' + fmtC(profit) + '元（' + (rev > 0 ? (profit / rev * 100).toFixed(1) : '0') + '%）。';
+    h += '</div>';
+    h += '</div>';
+
+    // 图表区域
+    h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px">';
+    h += '<canvas id="repChart" height="220"></canvas>';
+    h += '</div>';
+
+    // 表格：进销存明细
+    h += '<div class="tw"><table>';
+    h += '<tr>';
+    h += '<th>品名</th>';
+    h += '<th class="nr">期初</th>';
+    h += '<th class="nr">入库</th>';
+    h += '<th class="nr">销售</th>';
+    h += '<th class="nr">结存</th>';
+    h += '<th class="nr">销售额</th>';
+    h += '<th class="nr">成本</th>';
+    h += '<th class="nr">毛利</th>';
+    h += '<th class="nr">毛利率</th>';
+    h += '</tr>';
+
+    // 逐行：每个香烟品类
+    stats.forEach(function(st) {
+        var item = st.item;
+        var c = invCalc(item, 'cig');
+
+        // 本月入库和销售
+        var purch = 0;
+        var sold = 0;
+        item.purchases
+            .filter(function(p) { return p.date.startsWith(ym); })
+            .forEach(function(p) {
+                if (p.qty > 0) purch += p.qty;
+                else sold += Math.abs(p.qty);
+            });
+        item.sales
+            .filter(function(s) { return s.date.startsWith(ym); })
+            .forEach(function(s) { sold += s.qty || 0; });
+
+        // 期初 = 你入库时填写的本月期初
+        var opening = parseInt(item.openingStock || 0);
+
+        // 毛利率
+        var margin = st.revenue > 0 ? (st.profit / st.revenue * 100).toFixed(1) : '0';
+
+        h += '<tr>';
+        h += '<td>' + item.name + '</td>';
+        h += '<td class="nr">' + opening + '</td>';
+        h += '<td class="nr">' + purch + '</td>';
+        h += '<td class="nr">' + sold + '</td>';
+        h += '<td class="nr">' + c.stock + '</td>';
+        h += '<td class="nr">' + fmtC(st.revenue) + '</td>';
+        h += '<td class="nr">' + fmtC(st.cost) + '</td>';
+        h += '<td class="nr" style="color:' + (st.profit >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(st.profit) + '</td>';
+        h += '<td class="nr">' + margin + '%</td>';
+        h += '</tr>';
+    });
+
+    // 合计行
+    h += '<tr style="background:var(--card-h)">';
+    h += '<td style="font-weight:600">合计</td>';
+    h += '<td></td>';
+    h += '<td></td>';
+    h += '<td></td>';
+    h += '<td></td>';
+    h += '<td class="nr" style="font-weight:600">' + fmtC(rev) + '</td>';
+    h += '<td class="nr" style="font-weight:600">' + fmtC(cost) + '</td>';
+    h += '<td class="nr" style="font-weight:600;color:' + (profit >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(profit) + '</td>';
+    h += '<td class="nr" style="font-weight:600">' + (rev > 0 ? (profit / rev * 100).toFixed(1) : '0') + '%</td>';
+    h += '</tr>';
+
+    h += '</table></div>';
+
+    return h;
+}
 function renderTeaSection(stats,rev,cost,profit,ym){var totalCups=0,totalPots=0;stats.forEach(function(st){st.item.sales.filter(function(s){return s.date.startsWith(ym)}).forEach(function(s){totalCups+=(s.cups||0);totalPots+=(s.pots||0)})});var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">六、茗茶进销存及毛利</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">本月销售'+totalCups+'杯+'+totalPots+'壶，实收'+fmtC(rev)+'元，FIFO成本'+fmtC(cost)+'元，毛利'+fmtC(profit)+'元（'+(rev>0?(profit/rev*100).toFixed(1):'0')+'%）。</div></div>';h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px"><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px"><canvas id="repChart1" height="250"></canvas></div><div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px"><canvas id="repChart2" height="250"></canvas></div></div>';h+='<div class="tw"><table><tr><th>茶品</th><th class="nr">杯</th><th class="nr">壶</th><th class="nr">实收</th><th class="nr">成本</th><th class="nr">毛利</th><th class="nr">毛利率</th></tr>';stats.forEach(function(st){var cups=0,pots=0;st.item.sales.filter(function(s){return s.date.startsWith(ym)}).forEach(function(s){cups+=(s.cups||0);pots+=(s.pots||0)});var margin=st.revenue>0?(st.profit/st.revenue*100).toFixed(1):'0';h+='<tr><td>'+st.item.name+'</td><td class="nr">'+cups+'</td><td class="nr">'+pots+'</td><td class="nr">'+fmtC(st.revenue)+'</td><td class="nr">'+fmtC(st.cost)+'</td><td class="nr" style="color:'+(st.profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(st.profit)+'</td><td class="nr">'+margin+'%</td></tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td class="nr" style="font-weight:600">'+totalCups+'</td><td class="nr" style="font-weight:600">'+totalPots+'</td><td class="nr" style="font-weight:600">'+fmtC(rev)+'</td><td class="nr" style="font-weight:600">'+fmtC(cost)+'</td><td class="nr" style="font-weight:600;color:'+(profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(profit)+'</td><td class="nr" style="font-weight:600">'+(rev>0?(profit/rev*100).toFixed(1):'0')+'%</td></tr>';h+='</table></div>';return h}
 function renderAlcSection(stats,rev,cost,profit,ym){var totalQty=0;stats.forEach(function(st){st.item.sales.filter(function(s){return s.date.startsWith(ym)}).forEach(function(s){totalQty+=(s.qty||0)})});var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">七、酒类进销存及毛利</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">本月销售'+totalQty+'瓶，销售额'+fmtC(rev)+'元，成本'+fmtC(cost)+'元，毛利'+fmtC(profit)+'元（'+(rev>0?(profit/rev*100).toFixed(1):'0')+'%）。</div></div>';h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;max-width:500px;margin-bottom:14px"><canvas id="repChart" height="200"></canvas></div>';h+='<div class="tw"><table><tr><th>品名</th><th class="nr">期初</th><th class="nr">入库</th><th class="nr">销售</th><th class="nr">结存</th><th class="nr">销售额</th><th class="nr">成本</th><th class="nr">毛利</th><th class="nr">毛利率</th></tr>';stats.forEach(function(st){var c=invCalc(st.item,'alc');var purch=0,sold=0;st.item.purchases.filter(function(p){return p.date.startsWith(ym)}).forEach(function(p){if(p.qty>0)purch+=p.qty;else sold+=Math.abs(p.qty)});st.item.sales.filter(function(s){return s.date.startsWith(ym)}).forEach(function(s){sold+=s.qty||0});var margin=st.revenue>0?(st.profit/st.revenue*100).toFixed(1):'0';h+='<tr><td>'+st.item.name+'</td><td class="nr">'+parseInt(item.openingStock||0)+'</td><td class="nr">'+purch+'</td><td class="nr">'+sold+'</td><td class="nr">'+c.stock+'</td><td class="nr">'+fmtC(st.revenue)+'</td><td class="nr">'+fmtC(st.cost)+'</td><td class="nr" style="color:'+(st.profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(st.profit)+'</td><td class="nr">'+margin+'%</td></tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td></td><td></td><td></td><td></td><td class="nr" style="font-weight:600">'+fmtC(rev)+'</td><td class="nr" style="font-weight:600">'+fmtC(cost)+'</td><td class="nr" style="font-weight:600;color:'+(profit>=0?'var(--gn)':'var(--rd)')+'">'+fmtC(profit)+'</td><td class="nr" style="font-weight:600">'+(rev>0?(profit/rev*100).toFixed(1):'0')+'%</td></tr>';h+='</table></div>';return h}
 function renderDailySection(mr,net,guests,days){var avgNet=days>0?net/days:0,avgGuests=days>0?guests/days:0;var h='<div class="sec-head"><h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">八、每日营收速览</h4><div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">日均实收'+fmtC(avgNet)+'元，日均客流'+avgGuests.toFixed(1)+'人，月均人均'+(guests>0?(net/guests).toFixed(2):'0')+'元。</div></div>';h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:14px"><canvas id="repChart" height="220"></canvas></div>';h+='<div class="tw"><table><tr><th>日期</th><th class="nr">流水</th><th class="nr">折扣</th><th class="nr">实收</th><th class="nr">人数</th><th class="nr">人均</th></tr>';var sorted=mr.slice().sort(function(a,b){return a.date.localeCompare(b.date)});sorted.forEach(function(r){var d=parseInt(r.date.split('-')[2]);var ppg=r.guest.count>0?(r.revenue.netSales/r.guest.count).toFixed(2):'-';h+='<tr><td>'+d+'日</td><td class="nr">'+fmtC(r.revenue.grossSales||0)+'</td><td class="nr">'+fmtC(r.revenue.discount||0)+'</td><td class="nr">'+fmtC(r.revenue.netSales||0)+'</td><td class="nr">'+(r.guest.count||0)+'</td><td class="nr">'+ppg+'</td></tr>'});h+='<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td class="nr" style="font-weight:600">'+fmtC(mr.reduce(function(s,r){return s+(r.revenue.grossSales||0)},0))+'</td><td class="nr" style="font-weight:600">'+fmtC(mr.reduce(function(s,r){return s+(r.revenue.discount||0)},0))+'</td><td class="nr" style="font-weight:600">'+fmtC(net)+'</td><td class="nr" style="font-weight:600">'+guests+'</td><td class="nr" style="font-weight:600">'+(guests>0?(net/guests).toFixed(2):'-')+'</td></tr>';h+='</table></div>';return h}
@@ -2692,57 +3521,65 @@ function applyTheme(){
             navBg:'#1a1d23',navActive:'#22262e',modalBg:'rgba(0,0,0,0.7)',
             thBg:'#22262e',scrollbar:'#333840'
         },
-        '经典棕色':{
-            bg:'#1c1814',card:'#282320',cardH:'#322c28',
-            bd:'#3d3632',bdL:'#4a423c',
-            ac:'#c8956c',tx:'#e8ddd4',txM:'#8a7e74',txS:'#6a6058',
-            gn:'#6aad6a',rd:'#c85555',og:'#c8956c',
-            btnBg:'#3d3632',btnTx:'#e8ddd4',inputBg:'#322c28',inputBd:'#4a423c',
-            navBg:'#282320',navActive:'#322c28',modalBg:'rgba(0,0,0,0.7)',
-            thBg:'#322c28',scrollbar:'#4a423c'
+        '泸汀初雪':{
+            bg:'#EDE9E3',card:'#F7F4EF',cardH:'#EBE7E1',
+            bd:'#D2C4B2',bdL:'#C8BBAB',
+            ac:'#A1C1A1',tx:'#3A3530',txM:'#8A7E74',txS:'#A89E94',
+            gn:'#8BA995',rd:'#C85555',og:'#C8963C',
+            btnBg:'#D2C4B2',btnTx:'#3A3530',inputBg:'#F7F4EF',inputBd:'#D2C4B2',
+            navBg:'#EBE7E1',navActive:'#A1C1A1',modalBg:'rgba(0,0,0,0.3)',
+            thBg:'#EBE7E1',scrollbar:'#C8BBAB'
         },
-        '极简白':{
-            bg:'#f5f5f5',card:'#ffffff',cardH:'#f0f0f0',
-            bd:'#e0e0e0',bdL:'#d0d0d0',
-            ac:'#333333',tx:'#222222',txM:'#888888',txS:'#aaaaaa',
-            gn:'#2e8b57',rd:'#cc3333',og:'#cc8800',
-            btnBg:'#e8e8e8',btnTx:'#222222',inputBg:'#ffffff',inputBd:'#d0d0d0',
-            navBg:'#ffffff',navActive:'#f0f0f0',modalBg:'rgba(0,0,0,0.4)',
-            thBg:'#f0f0f0',scrollbar:'#cccccc'
+        '远山速影':{
+            bg:'#F2EDEA',card:'#FAF7F3',cardH:'#F0ECE8',
+            bd:'#D8C9BA',bdL:'#CCBFB0',
+            ac:'#A8BEDF',tx:'#3A3835',txM:'#8A8478',txS:'#A8A298',
+            gn:'#7BAA90',rd:'#C85555',og:'#C8963C',
+            btnBg:'#D8C9BA',btnTx:'#3A3835',inputBg:'#FAF7F3',inputBd:'#D8C9BA',
+            navBg:'#F0ECE8',navActive:'#A8BEDF',modalBg:'rgba(0,0,0,0.3)',
+            thBg:'#F0ECE8',scrollbar:'#CCBFB0'
         },
-        '森林绿':{
-            bg:'#0d1410',card:'#162018',cardH:'#1e2a22',
-            bd:'#283830',bdL:'#324238',
-            ac:'#5aad6a',tx:'#d8e8dc',txM:'#6a8a70',txS:'#4a6a50',
-            gn:'#5aad6a',rd:'#c85555',og:'#b8a040',
-            btnBg:'#283830',btnTx:'#d8e8dc',inputBg:'#1e2a22',inputBd:'#324238',
-            navBg:'#162018',navActive:'#1e2a22',modalBg:'rgba(0,0,0,0.7)',
-            thBg:'#1e2a22',scrollbar:'#324238'
+        '桃枝照水':{
+            bg:'#F0EBED',card:'#F8F5F6',cardH:'#EDE7E9',
+            bd:'#D4C4C8',bdL:'#C8B8BC',
+            ac:'#E6A6AC',tx:'#3A3235',txM:'#8A7A7E',txS:'#A89A9E',
+            gn:'#7BB88A',rd:'#C85555',og:'#C8963C',
+            btnBg:'#E6CDD0',btnTx:'#3A3235',inputBg:'#F8F5F6',inputBd:'#D4C4C8',
+            navBg:'#EDE7E9',navActive:'#E6A6AC',modalBg:'rgba(0,0,0,0.3)',
+            thBg:'#EDE7E9',scrollbar:'#C8B8BC'
         },
-        '星空蓝':{
-            bg:'#0d1117',card:'#161b22',cardH:'#1c2333',
-            bd:'#2a3040',bdL:'#343e50',
-            ac:'#58a6ff',tx:'#d8dee8',txM:'#6a7a8e',txS:'#4a5a6e',
-            gn:'#3fb950',rd:'#f85149',og:'#d29922',
-            btnBg:'#2a3040',btnTx:'#d8dee8',inputBg:'#1c2333',inputBd:'#343e50',
-            navBg:'#161b22',navActive:'#1c2333',modalBg:'rgba(0,0,0,0.7)',
-            thBg:'#1c2333',scrollbar:'#343e50'
+        '窗纱香灰':{
+            bg:'#ECEEF2',card:'#F5F6F8',cardH:'#E8EAF0',
+            bd:'#D0D4DC',bdL:'#C4C8D2',
+            ac:'#B6A9C8',tx:'#33353A',txM:'#787A82',txS:'#9A9CA4',
+            gn:'#7BAA9A',rd:'#C85555',og:'#C8963C',
+            btnBg:'#D0D4DC',btnTx:'#33353A',inputBg:'#F5F6F8',inputBd:'#D0D4DC',
+            navBg:'#E8EAF0',navActive:'#B6A9C8',modalBg:'rgba(0,0,0,0.3)',
+            thBg:'#E8EAF0',scrollbar:'#C4C8D2'
         },
-        '玫瑰粉':{
-            bg:'#181014',card:'#221820',cardH:'#2c2028',
-            bd:'#3a2834',bdL:'#483040',
-            ac:'#d4739a',tx:'#e8d8e0',txM:'#8a6a78',txS:'#6a4a58',
-            gn:'#6aad6a',rd:'#d45050',og:'#d49050',
-            btnBg:'#3a2834',btnTx:'#e8d8e0',inputBg:'#2c2028',inputBd:'#483040',
-            navBg:'#221820',navActive:'#2c2028',modalBg:'rgba(0,0,0,0.7)',
-            thBg:'#2c2028',scrollbar:'#483040'
+        '陶碗酒痕':{
+            bg:'#EDEEEC',card:'#F5F5F4',cardH:'#EBECEB',
+            bd:'#CFD4D2',bdL:'#C0C8C6',
+            ac:'#99B6B4',tx:'#353835',txM:'#7A7E7A',txS:'#9A9E9A',
+            gn:'#7BAA88',rd:'#D48982',og:'#D4A060',
+            btnBg:'#CFD4D2',btnTx:'#353835',inputBg:'#F5F5F4',inputBd:'#CFD4D2',
+            navBg:'#EBECEB',navActive:'#99B6B4',modalBg:'rgba(0,0,0,0.3)',
+            thBg:'#EBECEB',scrollbar:'#C0C8C6'
+        },
+        '疏林茶烟':{
+            bg:'#F0EBE4',card:'#F8F5F0',cardH:'#EDE8E2',
+            bd:'#D8CCC0',bdL:'#CCC0B4',
+            ac:'#CBAF98',tx:'#3A3530',txM:'#8A7E74',txS:'#A89E94',
+            gn:'#7BAA88',rd:'#C85555',og:'#C8963C',
+            btnBg:'#D8CCC0',btnTx:'#3A3530',inputBg:'#F8F5F0',inputBd:'#D8CCC0',
+            navBg:'#EDE8E2',navActive:'#CBAF98',modalBg:'rgba(0,0,0,0.3)',
+            thBg:'#EDE8E2',scrollbar:'#CCC0B4'
         }
     };
 
     var t=themes[name]||themes['默认深色'];
     var root=document.documentElement;
 
-    // 设置CSS变量
     root.style.setProperty('--bg',t.bg);
     root.style.setProperty('--card',t.card);
     root.style.setProperty('--card-h',t.cardH);
@@ -2756,12 +3593,19 @@ function applyTheme(){
     root.style.setProperty('--rd',t.rd);
     root.style.setProperty('--og',t.og);
 
-    // 注入覆盖样式
+    // 判断是否浅色主题（主色亮度高时文字用深色）
+    var acR=parseInt(t.ac.substr(1,2),16);
+    var acG=parseInt(t.ac.substr(3,2),16);
+    var acB=parseInt(t.ac.substr(5,2),16);
+    var acLum=acR*0.299+acG*0.587+acB*0.114;
+    var isLight=acLum>160;
+
+
     var css=[
         'body{background:'+t.bg+'!important;color:'+t.tx+'!important}',
         '.top-nav{background:'+t.navBg+'!important;border-color:'+t.bd+'!important}',
         '.nav-btn{color:'+t.txM+'!important;background:transparent!important}',
-        '.nav-btn.active{color:'+t.ac+'!important;background:'+t.navActive+'!important}',
+        '.nav-btn.active{background:'+t.navActive+'!important;color:'+(isLight?'#333':'#fff')+'!important;text-shadow:'+(isLight?'none':'0 1px 3px rgba(0,0,0,0.25)')+'!important}',
         '.nav-btn:hover{background:'+t.cardH+'!important}',
         '#main,#mainContent{background:'+t.bg+'!important;color:'+t.tx+'!important}',
         '.card{background:'+t.card+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
@@ -2770,7 +3614,7 @@ function applyTheme(){
         'select.inp,input.inp,textarea.inp{background:'+t.inputBg+'!important;border-color:'+t.inputBd+'!important;color:'+t.tx+'!important}',
         'select.inp option{background:'+t.card+'!important;color:'+t.tx+'!important}',
         '.btn{background:'+t.btnBg+'!important;color:'+t.btnTx+'!important;border-color:'+t.bd+'!important}',
-        '.btn.p{background:'+t.ac+'!important;color:#fff!important;border:none!important}',
+        '.btn.p{background:'+t.ac+'!important;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,0.25)!important;border:none!important}',
         '.btn.g{background:'+t.gn+'!important;color:#fff!important;border:none!important}',
         '.btn.d{background:'+t.rd+'!important;color:#fff!important;border:none!important}',
         '.btn.s{background:'+t.cardH+'!important;color:'+t.txM+'!important;border:1px solid '+t.bd+'!important}',
@@ -2789,7 +3633,7 @@ function applyTheme(){
         '.badge.rd{background:'+t.rd+'!important;color:#fff!important;border:none!important}',
         '.badge.og{background:'+t.og+'!important;color:#fff!important;border:none!important}',
         '.tab-btn{background:'+t.cardH+'!important;color:'+t.txM+'!important;border-color:'+t.bd+'!important}',
-        '.tab-btn.active{background:'+t.ac+'!important;color:#fff!important}',
+        '.tab-btn.active{background:'+t.ac+'!important;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,0.25)!important}',
         '.alert-bar{background:'+t.cardH+'!important;border-color:'+t.og+'!important}',
         '.totals-bar .card{background:'+t.card+'!important;border-color:'+t.bd+'!important}',
         'h3,h4{color:'+t.tx+'!important}',
@@ -2805,6 +3649,12 @@ function applyTheme(){
         '.brow{background:transparent!important}',
         'a{color:'+t.ac+'!important}',
         '#headerDate{color:'+t.txM+'!important}',
+        '.hrow{flex-wrap:nowrap!important}',
+        '.hrow label{white-space:nowrap!important;flex-shrink:0!important}',
+        '.hrow select.inp,.hrow input.inp{flex:1!important;min-width:0!important;max-width:none!important;width:auto!important}',
+        'select{text-align:left!important;text-align-last:left!important}',
+        '.del-btn{background:'+t.card+'!important;color:'+t.rd+'!important;border:1px solid '+t.rd+'!important}',
+        '.del-btn:hover{background:rgba(200,85,85,0.1)!important}',
         '::-webkit-scrollbar{width:6px}',
         '::-webkit-scrollbar-track{background:'+t.bg+'}',
         '::-webkit-scrollbar-thumb{background:'+t.scrollbar+';border-radius:3px}'
@@ -2815,6 +3665,7 @@ function applyTheme(){
     style.textContent=css;
     document.head.appendChild(style);
 }
+
 
 
 // ========================================
@@ -2903,94 +3754,88 @@ function applySpacing(){
         root.style.setProperty('--sp-l','16px');
     }
 }
-function rData(){var curH=localStorage.getItem('ax_font_heading')||'',curB=localStorage.getItem('ax_font_body')||'',curN=localStorage.getItem('ax_font_number')||'',curFS=localStorage.getItem('ax_fs')||'13.5';var h='<div class="sec">显示设置</div>';
+
+function rData(){
+var h='',v;
+
+var curH=localStorage.getItem('ax_font_heading')||'';
+var curB=localStorage.getItem('ax_font_body')||'';
+var curN=localStorage.getItem('ax_font_number')||'';
+var curFS=localStorage.getItem('ax_fs')||'13.5';
+
+h+='<div class="sec">显示设置</div>';
 h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 
-// 主题选择
-h+='<div class="hrow" style="margin-bottom:10px"><label>主题风格</label>';
-h+='<select class="inp" style="max-width:150px" onchange="setTheme(this.value)">';
-var themes=['默认深色','经典棕色','极简白','森林绿','星空蓝','玫瑰粉'];
+// 第1行：主题风格 + 字体大小
+h+='<div class="hrow" style="margin-bottom:10px">';
+h+='<label>主题风格</label>';
+h+='<select class="inp" onchange="setTheme(this.value)">';
+var themes=['默认深色','泸汀初雪','远山速影','桃枝照水','窗纱香灰','陶碗酒痕','疏林茶烟'];
 var curTheme=localStorage.getItem('ax_theme')||'默认深色';
 themes.forEach(function(t){h+='<option'+(curTheme===t?' selected':'')+'>'+t+'</option>'});
-h+='</select></div>';
-
-// 字体大小
-h+='<div class="hrow" style="margin-bottom:10px"><label>字体大小</label>';
-h+='<select class="inp" style="max-width:120px" onchange="setFontSize(this.value)">';
+h+='</select>';
+h+='<label>字体大小</label>';
+h+='<select class="inp" onchange="setFontSize(this.value)">';
 var sizes=[{v:'12',l:'小 12px'},{v:'13',l:'标准 13px'},{v:'14',l:'中 14px'},{v:'15',l:'大 15px'},{v:'17',l:'特大 17px'},{v:'19',l:'超大 19px'}];
 var curFS=localStorage.getItem('ax_fs')||'13';
 sizes.forEach(function(s){h+='<option value="'+s.v+'"'+(curFS===s.v?' selected':'')+'>'+s.l+'</option>'});
-h+='</select></div>';
+h+='</select>';
+h+='</div>';
 
-// 标题字体
-h+='<div class="hrow" style="margin-bottom:10px"><label>标题字体</label>';
-h+='<select class="inp" style="max-width:160px" onchange="setFontSetting(\'heading\',this.value)">';
+// 第2行：标题字体 + 正文字体 + 数字字体
+h+='<div class="hrow" style="margin-bottom:10px">';
+h+='<label>标题字体</label>';
+h+='<select class="inp" onchange="setFontSetting(\'heading\',this.value)">';
 var headingFonts=[
-    {v:'',l:'默认 Playfair Display'},
-    {v:'noto-serif',l:'思源宋体'},
-    {v:'noto-sans',l:'思源黑体'},
-    {v:'dm-serif',l:'DM Serif'},
-    {v:'syne',l:'Syne'},
-    {v:'bebas',l:'Bebas Neue'},
-    {v:'instrument',l:'Instrument Serif'},
-    {v:'playfair',l:'Playfair Display'},
-    {v:'cormorant',l:'Cormorant Garamond'},
-    {v:'lxgw-serif',l:'霞鹜文楷'}
+    {v:'',l:'默认 Playfair Display'},{v:'noto-serif',l:'思源宋体'},{v:'noto-sans',l:'思源黑体'},
+    {v:'dm-serif',l:'DM Serif'},{v:'syne',l:'Syne'},{v:'bebas',l:'Bebas Neue'},
+    {v:'instrument',l:'Instrument Serif'},{v:'playfair',l:'Playfair Display'},
+    {v:'cormorant',l:'Cormorant Garamond'},{v:'lxgw-serif',l:'霞鹜文楷'}
 ];
 var curH=localStorage.getItem('ax_font_heading')||'';
 headingFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curH===f.v?' selected':'')+'>'+f.l+'</option>'});
-h+='</select></div>';
-
-// 正文字体
-h+='<div class="hrow" style="margin-bottom:10px"><label>正文字体</label>';
-h+='<select class="inp" style="max-width:160px" onchange="setFontSetting(\'body\',this.value)">';
+h+='</select>';
+h+='<label>正文字体</label>';
+h+='<select class="inp" onchange="setFontSetting(\'body\',this.value)">';
 var bodyFonts=[
-    {v:'',l:'默认思源宋体'},
-    {v:'noto-sans',l:'思源黑体'},
-    {v:'lxgw-wenkai',l:'霞鹜文楷'},
-    {v:'source-serif',l:'Source Serif'},
-    {v:'crimson',l:'Crimson Pro'},
-    {v:'lora',l:'Lora'},
-    {v:'dm-sans',l:'DM Sans'}
+    {v:'',l:'默认思源宋体'},{v:'noto-sans',l:'思源黑体'},{v:'lxgw-wenkai',l:'霞鹜文楷'},
+    {v:'source-serif',l:'Source Serif'},{v:'crimson',l:'Crimson Pro'},
+    {v:'lora',l:'Lora'},{v:'dm-sans',l:'DM Sans'}
 ];
 var curB=localStorage.getItem('ax_font_body')||'';
 bodyFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curB===f.v?' selected':'')+'>'+f.l+'</option>'});
-h+='</select></div>';
-
-// 数字字体
-h+='<div class="hrow" style="margin-bottom:10px"><label>数字字体</label>';
-h+='<select class="inp" style="max-width:160px" onchange="setFontSetting(\'number\',this.value)">';
+h+='</select>';
+h+='<label>数字字体</label>';
+h+='<select class="inp" onchange="setFontSetting(\'number\',this.value)">';
 var numberFonts=[
-    {v:'',l:'默认等宽'},
-    {v:'dm-mono',l:'DM Mono'},
-    {v:'lexend',l:'Lexend'},
-    {v:'noto-sans',l:'黑体数字'},
-    {v:'courier',l:'Courier New'},
-    {v:'jetbrains',l:'JetBrains Mono'},
-    {v:'fira',l:'Fira Code'},
-    {v:'ibm-plex',l:'IBM Plex Mono'}
+    {v:'',l:'默认等宽'},{v:'dm-mono',l:'DM Mono'},{v:'lexend',l:'Lexend'},
+    {v:'noto-sans',l:'黑体数字'},{v:'courier',l:'Courier New'},
+    {v:'jetbrains',l:'JetBrains Mono'},{v:'fira',l:'Fira Code'},{v:'ibm-plex',l:'IBM Plex Mono'}
 ];
 var curN=localStorage.getItem('ax_font_number')||'';
 numberFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curN===f.v?' selected':'')+'>'+f.l+'</option>'});
-h+='</select></div>';
+h+='</select>';
+h+='</div>';
 
-// 圆角大小
-h+='<div class="hrow" style="margin-bottom:10px"><label>圆角大小</label>';
-h+='<select class="inp" style="max-width:120px" onchange="setRadius(this.value)">';
+// 第3行：圆角大小 + 页面间距
+h+='<div class="hrow">';
+h+='<label>圆角大小</label>';
+h+='<select class="inp" onchange="setRadius(this.value)">';
 var radiuses=[{v:'6',l:'小 6px'},{v:'10',l:'中 10px'},{v:'14',l:'大 14px'},{v:'20',l:'圆润 20px'}];
 var curR=localStorage.getItem('ax_radius')||'10';
 radiuses.forEach(function(r){h+='<option value="'+r.v+'"'+(curR===r.v?' selected':'')+'>'+r.l+'</option>'});
-h+='</select></div>';
-
-// 页面间距
-h+='<div class="hrow"><label>页面间距</label>';
-h+='<select class="inp" style="max-width:120px" onchange="setSpacing(this.value)">';
+h+='</select>';
+h+='<label>页面间距</label>';
+h+='<select class="inp" onchange="setSpacing(this.value)">';
 var spacings=[{v:'compact',l:'紧凑'},{v:'normal',l:'标准'},{v:'loose',l:'宽松'}];
 var curS=localStorage.getItem('ax_spacing')||'normal';
 spacings.forEach(function(s){h+='<option value="'+s.v+'"'+(curS===s.v?' selected':'')+'>'+s.l+'</option>'});
-h+='</select></div>';
+h+='</select>';
+h+='</div>';
 
 h+='</div>';
+
+h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 
 h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 h += '<p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px">用于采购单拍照识别，接入小米MiMo视觉API</p>';
@@ -3000,6 +3845,7 @@ h+='<div class="hrow"><label>模型</label><select class="inp" id="mimoModel" st
 h += '<div class="brow" style="margin-top:8px"><button class="btn p" onclick="saveMimoCfg()">保存配置</button></div>';
 h += '</div>';
 h+='<div class="sec">GitHub 同步</div>';if(!_gh.ready){h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><h4 style="font-size:.84rem;margin-bottom:8px">设置同步</h4><p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px"><a href="https://github.com/settings/tokens" target="_blank" style="color:var(--ac)">创建Token</a> → 勾选 gist</p><div class="hrow"><input class="inp" id="ghTK" placeholder="ghp_xxxx..."></div><div class="brow" style="margin-top:8px"><button class="btn p" onclick="ghSetToken(document.getElementById(\'ghTK\').value)">连接</button></div></div>'}else{h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px"><p style="font-size:.74rem;color:var(--gn)">已连接 · Gist: '+(_gh.gistId||'创建中')+'</p><div class="brow"><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button><button class="btn d s" onclick="ghDisconnect()">断开</button></div></div>'}h+='<div class="sec">数据码</div><div class="brow"><button class="btn" onclick="genSyncCode()">生成</button><button class="btn" onclick="importSyncCode()">导入</button></div>';h+='<div class="sec">设置</div><div class="cards"><div class="card"><div class="card-l">日报</div><div class="card-v">'+DB.dailyReports.length+'</div></div><div class="card"><div class="card-l">采购</div><div class="card-v">'+DB.purchases.length+'</div></div><div class="card"><div class="card-l">费用</div><div class="card-v">'+DB.expenses.length+'</div></div><div class="card"><div class="card-l">仓库</div><div class="card-v">'+(DB.whItems||[]).length+'</div></div></div><div class="brow"><button class="btn" onclick="expJSON()">导出JSON</button><input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)"><button class="btn" onclick="document.getElementById(\'impF\').click()">导入</button></div>';h+='<div class="sec">示例</div><div class="brow"><button class="btn" onclick="loadSample()">加载示例</button></div><div class="sec" style="color:var(--rd)">危险</div><div class="brow"><button class="btn d" onclick="if(confirm(\'清空？\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';setMain('设置',h)}
+
 function expJSON(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}));a.download='岸香咖啡_'+td()+'.json';a.click();toast('已导出')}
 function impJSON(event){var f=event.target.files[0];if(!f)return;var reader=new FileReader();reader.onload=function(e){try{DB=JSON.parse(e.target.result);saveDB(DB);ghScheduleSave();toast('已导入');rData()}catch(err){toast('失败')}};reader.readAsText(f);event.target.value=''}
 function loadSample(){var d=initDB();for(var i=0;i<7;i++){var dd=new Date();dd.setDate(dd.getDate()-i);var ds=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');var net=3200+Math.round(Math.random()*1200);d.dailyReports.push({date:ds,revenue:{grossSales:net+300,discount:Math.round(Math.random()*300),netSales:net,kitchenSales:Math.round(net*.65),barSales:Math.round(net*.25),cigarette:{total:100+Math.round(Math.random()*200),items:{金皖:Math.round(Math.random()*10)}},other:Math.round(Math.random()*150),otherItems:{}},payment:{pos:Math.round(net*.7),ccbLife:0,cash:Math.round(net*.05),memberCard:Math.round(net*.1),ar:{total:0,meituan:0,douyin:0},treat:0},delivery:{total:Math.round(Math.random()*700),meituan:Math.round(Math.random()*400),taobao:0,jd:0},guest:{count:35+Math.round(Math.random()*25),avgSpend:0,premiumRoomsToday:0},rooms:[],premiumRooms:{today:0},teaSales:{},cigSales:{},alcSales:{},reporter:'示例'})}d.cigItems=[{id:'cig_1',name:'黄山（金皖）',costPerUnit:24,pricePerUnit:28,openingStock:30,restockAlert:15,purchaseUnit:'条',purchaseConvRatio:10,purchases:[],sales:[]}];d.alcItems=[{id:'alc_1',name:'百威啤酒',costPerUnit:6,pricePerUnit:15,openingStock:48,restockAlert:10,purchaseUnit:'箱',purchaseConvRatio:24,purchases:[],sales:[]}];d.whItems=[{id:'wh_1',name:'一次性手套',category:'包装',unit:'箱',stock:5,safeStock:2,movements:[]},{id:'wh_2',name:'吸管',category:'包装',unit:'包',stock:20,safeStock:10,movements:[]},{id:'wh_3',name:'柠檬汁',category:'调料',unit:'瓶',stock:2,safeStock:1,movements:[]},{id:'wh_6',name:'打包盒',category:'包装',unit:'箱',stock:3,safeStock:5,movements:[]}];d.expenses=[{id:'e_1',date:'2026-05-01',category:'水电煤',amount:2800,note:'',photoFile:''}];d.purchases=[{id:'p_1',date:'2026-05-01',source:'岸香贸易',items:[{name:'古越龙山500ML绍兴花雕酒',section:'厨房',category:'调料/粮油',qty:1,unit:'件',unitPrice:69,total:69,source:'岸香贸易'},{name:'中盐500G精制食盐',section:'厨房',category:'调料/粮油',qty:1,unit:'件',unitPrice:46,total:46,source:'岸香贸易'},{name:'赢鸿5L菜籽油',section:'厨房',category:'调料/粮油',qty:2,unit:'桶',unitPrice:87.20,total:174.40,source:'岸香贸易'},{name:'凤珠暖2.5KG雪花生粉',section:'厨房',category:'调料/粮油',qty:1,unit:'袋',unitPrice:28.64,total:28.64,source:'岸香贸易'},{name:'海麟娃108G什锦蔬菜干',section:'吧台',category:'其他',qty:1,unit:'件',unitPrice:179.92,total:179.92,source:'岸香贸易'}]},{id:'p_2',date:'2026-05-03',source:'岸香贸易',items:[{name:'古越龙山500ML绍兴花雕酒',section:'厨房',category:'调料/粮油',qty:2,unit:'件',unitPrice:72,total:144,source:'岸香贸易'},{name:'赢鸿5L菜籽油',section:'厨房',category:'调料/粮油',qty:1,unit:'桶',unitPrice:89.50,total:89.50,source:'岸香贸易'}]}];d.damageRecords=[];DB=d;saveDB(DB);ghScheduleSave();toast('已加载');rData()}
@@ -3105,6 +3951,7 @@ function checkMimoAccount() {
     var el2 = document.getElementById('aiUsageInfo');
     if (el2) el2.innerHTML = '';
 }
+
 // ========================================
 // 功能1：智能日报解析
 // 粘贴日报文字 → MiMo解析 → 弹窗确认 → 保存
@@ -3572,11 +4419,13 @@ function aiAskQuestion() {
 }
 
 // ===== INIT =====
+applyTheme();
 var _savedFS=localStorage.getItem('ax_fs');if(_savedFS)document.documentElement.style.fontSize=_savedFS+'px';
 var _savedFontSetup=localStorage.getItem('ax_font_heading')||localStorage.getItem('ax_font_body')||localStorage.getItem('ax_font_number');if(_savedFontSetup)applyFonts();
 ghInit();renderNav();migrateAreaCats();initConfig();goPage('ai');if(_gh.ready)ghSyncOnStart();
 function renderDHist(){var el=document.getElementById('dhArea');if(!el)return;var ym=document.getElementById('dhM')?document.getElementById('dhM').value:curYM();if(!ym)ym=curYM();var reports={};DB.dailyReports.forEach(function(r){if(r.date.startsWith(ym)){reports[parseInt(r.date.split('-')[2])]=r}});var daysInMonth=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1]),0).getDate();var firstDay=new Date(parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1])-1,1).getDay();firstDay=firstDay===0?6:firstDay-1;var h='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';['一','二','三','四','五','六','日'].forEach(function(w){h+='<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">'+w+'</div>'});for(var i=0;i<firstDay;i++)h+='<div></div>';for(var d=1;d<=daysInMonth;d++){var r=reports[d];var isToday=parseInt(td().split('-')[2])===d&&td().startsWith(ym);var has=!!r;h+='<div style="background:'+(has?'var(--card)':'var(--card-h)')+';border:1px solid '+(isToday?'var(--ac)':'var(--bd)')+';border-radius:6px;padding:6px;cursor:'+(has?'pointer':'default')+';min-height:65px"';if(has)h+=' onclick="showDailyModal(\''+r.date+'\')"';h+='><div style="font-size:.72rem;font-weight:600;color:'+(isToday?'var(--ac)':'var(--tx)')+'">'+d+'</div>';if(has)h+='<div style="font-family:var(--fm);font-size:.7rem;color:var(--ac);margin-top:2px">'+fmtC(r.revenue.netSales)+'</div><div style="font-size:.6rem;color:var(--tx-m)">'+r.guest.count+'人</div>';else h+='<div style="font-size:.6rem;color:var(--tx-m);margin-top:4px">-</div>';h+='</div>'}h+='</div>';var mr=getMR(ym);if(mr.length){var mNet=mr.reduce(function(s,r){return s+(r.revenue.netSales||0)},0),mGuests=mr.reduce(function(s,r){return s+(r.guest.count||0)},0);h+='<div class="cards"><div class="card"><div class="card-l">本月实收</div><div class="card-v ac">'+fmtC(mNet)+'</div></div><div class="card"><div class="card-l">已报天数</div><div class="card-v">'+mr.length+'</div></div><div class="card"><div class="card-l">总客流</div><div class="card-v">'+mGuests+'</div></div></div>'}el.innerHTML=h}
 </script>
+
 <script>
 var _chartSrcs=['https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js','https://unpkg.com/chart.js@4.4.0/dist/chart.umd.min.js','https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'];
 function _loadChart(i){if(i>=_chartSrcs.length)return;var s=document.createElement('script');s.src=_chartSrcs[i];s.onload=function(){window._chartLoaded=true};s.onerror=function(){_loadChart(i+1)};document.head.appendChild(s)}
@@ -3589,8 +4438,6 @@ setTimeout(function() {
     if (!items.length) return;
     var aiItem = items[items.length-1].cloneNode(true);
     aiItem.setAttribute('data-page', 'ai');
-    applyTheme();
-    applyFonts();
     var savedFS=localStorage.getItem('ax_fs');if(savedFS)document.documentElement.style.fontSize=savedFS+'px';
     var savedR=localStorage.getItem('ax_radius');if(savedR)document.documentElement.style.setProperty('--r',savedR+'px');
     applySpacing();
