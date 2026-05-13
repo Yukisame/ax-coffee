@@ -168,12 +168,26 @@ function fmtC(n){return(n<0?'-':'')+fmt(Math.abs(n))}
 function fmtP(n){return n.toFixed(1)+'%'}
 function extN(s){var m=s.match(/([\d,]+\.?\d*)/);return m?parseFloat(m[0].replace(/,/g,'')):0}
 function toast(m){var t=$id('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2200)}
+
 function showModal(html, width) {
     var el = document.getElementById('modal');
     var w = width || 420;
+    var t = localStorage.getItem('ax_theme') || '默认深色';
+    var modalBg = {
+        '默认深色': '#0f1114',
+        '泸汀初雪': '#EDE9E3',
+        '远山速影': '#F2EDEA',
+        '桃枝照水': '#F0EBED',
+        '窗纱香灰': '#ECEEF2',
+        '陶碗酒痕': '#EDEEEC',
+        '疏林茶烟': '#F0EBE4'
+    };
     el.innerHTML = '<div class="modal-content" style="max-width:' + w + 'px;width:92vw">' + html + '</div>';
     el.style.display = 'flex';
+    el.style.setProperty('background', modalBg[t] || '#0f1114', 'important');
 }
+
+
 
 function closeModal() {
     document.getElementById('modal').style.display = 'none';
@@ -668,12 +682,11 @@ function hideAILoading(){
     if(window._aiTimerInterval){clearInterval(window._aiTimerInterval);window._aiTimerInterval=null}
     var el=document.getElementById('aiLoadingOverlay');
     if(!el)return;
-    var elapsed=Math.floor((Date.now()-(window._aiStartTime||Date.now()))/1000);
     el.innerHTML='<div style="width:18px;height:18px;border-radius:50%;background:var(--gn);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;flex-shrink:0">✓</div>'
-        +'<div><div style="font-size:.78rem;font-weight:600;color:var(--gn)">分析完成</div>'
-        +'<div style="font-size:.65rem;color:var(--tx-m)">耗时'+elapsed+'秒 · 结果已保存到历史</div></div>';
+        +'<div><div style="font-size:.78rem;font-weight:600;color:var(--gn)">分析完成</div></div>';
     setTimeout(function(){var e=document.getElementById('aiLoadingOverlay');if(e)e.remove()},2000);
 }
+
 
 // ========================================
 // 保存AI分析记录
@@ -3511,71 +3524,72 @@ function applyTheme(){
     var existing=document.getElementById('axThemeStyle');
     if(existing)existing.remove();
 
-    var themes={
-        '默认深色':{
-            bg:'#0f1114',card:'#1a1d23',cardH:'#22262e',
-            bd:'#2a2e36',bdL:'#333840',
-            ac:'#d4a853',tx:'#e8e4dc',txM:'#7a766e',txS:'#5a5850',
-            gn:'#4caf7d',rd:'#e05555',og:'#e8a035',
-            btnBg:'#2a2e36',btnTx:'#e8e4dc',inputBg:'#22262e',inputBd:'#333840',
-            navBg:'#1a1d23',navActive:'#22262e',modalBg:'rgba(0,0,0,0.7)',
-            thBg:'#22262e',scrollbar:'#333840'
+    var themes = {
+        '默认深色': {
+            bg: '#0f1114', card: '#1a1d23', cardH: '#22262e',
+            bd: '#2a2e36', bdL: '#333840',
+            ac: '#d4a853', tx: '#e8e4dc', txM: '#7a766e', txS: '#5a5850',
+            gn: '#4caf7d', rd: '#e05555', og: '#e8a035',
+            btnBg: '#2a2e36', btnTx: '#e8e4dc', inputBg: '#22262e', inputBd: '#333840',
+            navBg: '#1a1d23', navActive: '#22262e', modalBg: '#0f1114',
+            thBg: '#22262e', scrollbar: '#333840'
         },
-        '泸汀初雪':{
-            bg:'#EDE9E3',card:'#F7F4EF',cardH:'#EBE7E1',
-            bd:'#D2C4B2',bdL:'#C8BBAB',
-            ac:'#A1C1A1',tx:'#3A3530',txM:'#8A7E74',txS:'#A89E94',
-            gn:'#8BA995',rd:'#C85555',og:'#C8963C',
-            btnBg:'#D2C4B2',btnTx:'#3A3530',inputBg:'#F7F4EF',inputBd:'#D2C4B2',
-            navBg:'#EBE7E1',navActive:'#A1C1A1',modalBg:'rgba(0,0,0,0.3)',
-            thBg:'#EBE7E1',scrollbar:'#C8BBAB'
+        '泸汀初雪': {
+            bg: '#EDE9E3', card: '#F7F4EF', cardH: '#EBE7E1',
+            bd: '#D2C4B2', bdL: '#C8BBAB',
+            ac: '#A1C1A1', tx: '#3A3530', txM: '#8A7E74', txS: '#A89E94',
+            gn: '#8BA995', rd: '#C85555', og: '#C8963C',
+            btnBg: '#D2C4B2', btnTx: '#3A3530', inputBg: '#F7F4EF', inputBd: '#D2C4B2',
+            navBg: '#EBE7E1', navActive: '#A1C1A1', modalBg: '#EDE9E3',
+            thBg: '#EBE7E1', scrollbar: '#C8BBAB'
         },
-        '远山速影':{
-            bg:'#F2EDEA',card:'#FAF7F3',cardH:'#F0ECE8',
-            bd:'#D8C9BA',bdL:'#CCBFB0',
-            ac:'#A8BEDF',tx:'#3A3835',txM:'#8A8478',txS:'#A8A298',
-            gn:'#7BAA90',rd:'#C85555',og:'#C8963C',
-            btnBg:'#D8C9BA',btnTx:'#3A3835',inputBg:'#FAF7F3',inputBd:'#D8C9BA',
-            navBg:'#F0ECE8',navActive:'#A8BEDF',modalBg:'rgba(0,0,0,0.3)',
-            thBg:'#F0ECE8',scrollbar:'#CCBFB0'
+        '远山速影': {
+            bg: '#F2EDEA', card: '#FAF7F3', cardH: '#F0ECE8',
+            bd: '#D8C9BA', bdL: '#CCBFB0',
+            ac: '#A8BEDF', tx: '#3A3835', txM: '#8A8478', txS: '#A8A298',
+            gn: '#7BAA90', rd: '#C85555', og: '#C8963C',
+            btnBg: '#D8C9BA', btnTx: '#3A3835', inputBg: '#FAF7F3', inputBd: '#D8C9BA',
+            navBg: '#F0ECE8', navActive: '#A8BEDF', modalBg: '#F2EDEA',
+            thBg: '#F0ECE8', scrollbar: '#CCBFB0'
         },
-        '桃枝照水':{
-            bg:'#F0EBED',card:'#F8F5F6',cardH:'#EDE7E9',
-            bd:'#D4C4C8',bdL:'#C8B8BC',
-            ac:'#E6A6AC',tx:'#3A3235',txM:'#8A7A7E',txS:'#A89A9E',
-            gn:'#7BB88A',rd:'#C85555',og:'#C8963C',
-            btnBg:'#E6CDD0',btnTx:'#3A3235',inputBg:'#F8F5F6',inputBd:'#D4C4C8',
-            navBg:'#EDE7E9',navActive:'#E6A6AC',modalBg:'rgba(0,0,0,0.3)',
-            thBg:'#EDE7E9',scrollbar:'#C8B8BC'
+        '桃枝照水': {
+            bg: '#F0EBED', card: '#F8F5F6', cardH: '#EDE7E9',
+            bd: '#D4C4C8', bdL: '#C8B8BC',
+            ac: '#E6A6AC', tx: '#3A3235', txM: '#8A7A7E', txS: '#A89A9E',
+            gn: '#7BB88A', rd: '#C85555', og: '#C8963C',
+            btnBg: '#E6CDD0', btnTx: '#3A3235', inputBg: '#F8F5F6', inputBd: '#D4C4C8',
+            navBg: '#EDE7E9', navActive: '#E6A6AC', modalBg: '#F0EBED',
+            thBg: '#EDE7E9', scrollbar: '#C8B8BC'
         },
-        '窗纱香灰':{
-            bg:'#ECEEF2',card:'#F5F6F8',cardH:'#E8EAF0',
-            bd:'#D0D4DC',bdL:'#C4C8D2',
-            ac:'#B6A9C8',tx:'#33353A',txM:'#787A82',txS:'#9A9CA4',
-            gn:'#7BAA9A',rd:'#C85555',og:'#C8963C',
-            btnBg:'#D0D4DC',btnTx:'#33353A',inputBg:'#F5F6F8',inputBd:'#D0D4DC',
-            navBg:'#E8EAF0',navActive:'#B6A9C8',modalBg:'rgba(0,0,0,0.3)',
-            thBg:'#E8EAF0',scrollbar:'#C4C8D2'
+        '窗纱香灰': {
+            bg: '#ECEEF2', card: '#F5F6F8', cardH: '#E8EAF0',
+            bd: '#D0D4DC', bdL: '#C4C8D2',
+            ac: '#B6A9C8', tx: '#33353A', txM: '#787A82', txS: '#9A9CA4',
+            gn: '#7BAA9A', rd: '#C85555', og: '#C8963C',
+            btnBg: '#D0D4DC', btnTx: '#33353A', inputBg: '#F5F6F8', inputBd: '#D0D4DC',
+            navBg: '#E8EAF0', navActive: '#B6A9C8', modalBg: '#ECEEF2',
+            thBg: '#E8EAF0', scrollbar: '#C4C8D2'
         },
-        '陶碗酒痕':{
-            bg:'#EDEEEC',card:'#F5F5F4',cardH:'#EBECEB',
-            bd:'#CFD4D2',bdL:'#C0C8C6',
-            ac:'#99B6B4',tx:'#353835',txM:'#7A7E7A',txS:'#9A9E9A',
-            gn:'#7BAA88',rd:'#D48982',og:'#D4A060',
-            btnBg:'#CFD4D2',btnTx:'#353835',inputBg:'#F5F5F4',inputBd:'#CFD4D2',
-            navBg:'#EBECEB',navActive:'#99B6B4',modalBg:'rgba(0,0,0,0.3)',
-            thBg:'#EBECEB',scrollbar:'#C0C8C6'
+        '陶碗酒痕': {
+            bg: '#EDEEEC', card: '#F5F5F4', cardH: '#EBECEB',
+            bd: '#CFD4D2', bdL: '#C0C8C6',
+            ac: '#99B6B4', tx: '#353835', txM: '#7A7E7A', txS: '#9A9E9A',
+            gn: '#7BAA88', rd: '#D48982', og: '#D4A060',
+            btnBg: '#CFD4D2', btnTx: '#353835', inputBg: '#F5F5F4', inputBd: '#CFD4D2',
+            navBg: '#EBECEB', navActive: '#99B6B4', modalBg: '#EDEEEC',
+            thBg: '#EBECEB', scrollbar: '#C0C8C6'
         },
-        '疏林茶烟':{
-            bg:'#F0EBE4',card:'#F8F5F0',cardH:'#EDE8E2',
-            bd:'#D8CCC0',bdL:'#CCC0B4',
-            ac:'#CBAF98',tx:'#3A3530',txM:'#8A7E74',txS:'#A89E94',
-            gn:'#7BAA88',rd:'#C85555',og:'#C8963C',
-            btnBg:'#D8CCC0',btnTx:'#3A3530',inputBg:'#F8F5F0',inputBd:'#D8CCC0',
-            navBg:'#EDE8E2',navActive:'#CBAF98',modalBg:'rgba(0,0,0,0.3)',
-            thBg:'#EDE8E2',scrollbar:'#CCC0B4'
+        '疏林茶烟': {
+            bg: '#F0EBE4', card: '#F8F5F0', cardH: '#EDE8E2',
+            bd: '#D8CCC0', bdL: '#CCC0B4',
+            ac: '#CBAF98', tx: '#3A3530', txM: '#8A7E74', txS: '#A89E94',
+            gn: '#7BAA88', rd: '#C85555', og: '#C8963C',
+            btnBg: '#D8CCC0', btnTx: '#3A3530', inputBg: '#F8F5F0', inputBd: '#D8CCC0',
+            navBg: '#EDE8E2', navActive: '#CBAF98', modalBg: '#F0EBE4',
+            thBg: '#EDE8E2', scrollbar: '#CCC0B4'
         }
     };
+
 
     var t=themes[name]||themes['默认深色'];
     var root=document.documentElement;
@@ -3626,7 +3640,6 @@ function applyTheme(){
         '.pur-folder{background:transparent!important}',
         '.pur-hdr{background:'+t.cardH+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
         '.pur-body{border-color:'+t.bdL+'!important}',
-        '.modal{background:'+t.modalBg+'!important}',
         '.modal-content{background:'+t.card+'!important;border-color:'+t.bd+'!important;color:'+t.tx+'!important}',
         '.badge{background:'+t.cardH+'!important;color:'+t.txM+'!important;border:1px solid '+t.bd+'!important}',
         '.badge.gn{background:'+t.gn+'!important;color:#fff!important;border:none!important}',
