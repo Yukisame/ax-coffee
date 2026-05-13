@@ -265,21 +265,19 @@ function updateCatSelect(selEl, area) {
 //   idx    - 这是第几行
 // ========================================
 function purAreaChanged(areaEl, idx) {
-    var area = areaEl.value;      // 用户选的新区域
-    _pmItems[idx].section = area; // 更新数据
-    _pmItems[idx].category = '';  // 清空分类
+    var area = areaEl.value;
+    _pmItems[idx].section = area;
+    _pmItems[idx].category = '';
 
-    // 找到同一行里的分类下拉
-    // closest('tr') 找最近的父级 <tr> 元素
-    // querySelectorAll('select')[1] 找行内第2个select（第1个是区域）
     var row = areaEl.closest('tr');
     if (row) {
         var selects = row.querySelectorAll('select');
-        if (selects[1]) {
-            updateCatSelect(selects[1], area); // 重建分类下拉
+        if (selects[2]) {
+            updateCatSelect(selects[2], area);
         }
     }
 }
+
 
 function invCalc(item,type){var tp=item.purchases.reduce(function(s,p){return s+p.qty},0);if(type==='tea'){var tc=item.sales.reduce(function(s,r){return s+(r.cups||0)},0),tp2=item.sales.reduce(function(s,r){return s+(r.pots||0)},0),rev=item.sales.reduce(function(s,r){return s+r.amount},0);if(item.calcMode==='pack'){var cost=(tc*(item.packsPerCup||0)+tp2*(item.packsPerPot||0))*(item.costPerPack||0),stock=(item.openingStock||0)+tp}else{var cost=tc*(item.gramsPerCup||0)*(item.costPerGram||0)+tp2*(item.gramsPerPot||0)*(item.costPerGram||0),stock=(item.openingStock||0)+tp}return{stock:stock,revenue:rev,cost:cost,profit:rev-cost,margin:rev>0?(rev-cost)/rev*100:0}}var ts=item.sales.reduce(function(s,r){return s+(r.qty||0)},0),rev=item.sales.reduce(function(s,r){return s+r.amount},0);return{stock:(item.openingStock||0)+tp-ts,revenue:rev,cost:ts*(item.costPerUnit||0),profit:rev-ts*(item.costPerUnit||0),margin:rev>0?(rev-ts*(item.costPerUnit||0))/rev*100:0}}
 function invCalcMon(item,type,ym){var sales=item.sales.filter(function(s){return s.date&&s.date.startsWith(ym)});var revenue=0,cost=0;if(type==='tea'){sales.forEach(function(s){revenue+=(s.amount||0);cost+=((s.cups||0)*(item.gramsPerCup||5)+(s.pots||0)*(item.gramsPerPot||15))*(item.costPerGram||0)})}else{sales.forEach(function(s){revenue+=(s.amount||0);cost+=(s.qty||0)*(item.costPerUnit||0)})}return{revenue:revenue,cost:cost,actual:revenue}}
@@ -1269,7 +1267,7 @@ function doMimoTextParseGo() {
             if (!result.date) result.date = td();
             var src = result.source || '';
             if (/岸香.*贸易|贸易.*岸香/.test(src)) src = '岸香贸易';
-            else if (!src) src = '外购';
+            else if (!src) src = '岸香贸易';
 
             // 填入手动录入表单
             _pmItems = [];
@@ -1438,7 +1436,7 @@ function showMimoConfirm(){
     h+='<option'+(result.source==='岸香贸易'?' selected':'')+'>岸香贸易</option>';
     h+='<option'+(result.source==='外购'?' selected':'')+'>外购</option></select></div>';
     h+='<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';
-    h+='<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';
+    h+='<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充:</div>';
     h+='<div class="hrow"><label>区域</label>';
     h+='<select class="inp" id="mimoBatchSec" style="max-width:110px"><option value="">不填充</option>';
     secs.forEach(function(s){h+='<option>'+s+'</option>'});
@@ -1639,18 +1637,23 @@ function batchSecChanged(sel) {
     catSel.innerHTML = html;
 }
 
-// 批量填充分类变化 → 批量应用
-function batchCatChanged(sel) {
-    var val = sel.value;
-    if (!val) return;
+// 批量填充全部
+function batchFillAll() {
+    var src = ($id('pmBatchSrc') || {}).value || '';
+    var sec = ($id('pmBatchSec') || {}).value || '';
+    var cat = ($id('pmBatchCat') || {}).value || '';
+    if (!src && !sec && !cat) { toast('请选择要填充的值'); return; }
     _pmItems.forEach(function(item) {
-        if (!item.category) item.category = val;
+        if (src) item.source = src;
+        if (sec) item.section = sec;
+        if (cat) item.category = cat;
     });
     renderPML();
-    toast('已填充分类');
+    toast('已填充全部');
 }
 
-function addPurItem(){var n=$id('pmName').value.trim();if(!n){toast('填品名');return}var q=parseFloat($id('pmQty').value)||0,t=parseFloat($id('pmTotal').value)||0,up=parseFloat($id('pmUnitPrice').value)||0;if(!up&&q>0&&t>0)up=Math.round(t/q*100)/100;var sec=getSelVal('pmSec','pmSecC');var cat=getSelVal('pmCat','pmCatC');_pmItems.push({name:n,section:sec,category:cat,qty:q,unit:$id('pmUnit').value.trim(),unitPrice:up,total:t,source:$id('pmSrc').value});$id('pmName').value='';$id('pmQty').value='';$id('pmTotal').value='';$id('pmUnitPrice').value='';$id('pmUnit').value='';renderPML()}
+
+function addPurItem(){var n=$id('pmName').value.trim();if(!n){toast('填品名');return}var q=parseFloat($id('pmQty').value)||0,t=parseFloat($id('pmTotal').value)||0,up=parseFloat($id('pmUnitPrice').value)||0;if(!up&&q>0&&t>0)up=Math.round(t/q*100)/100;var sec=getSelVal('pmSec','pmSecC');var cat=getSelVal('pmCat','pmCatC');_pmItems.push({name:n,section:sec,category:cat,qty:q,unit:$id('pmUnit').value.trim(),unitPrice:up,total:t,source:$id('pmSrc').value});$id('pmName').focus();$id('pmName').select();$id('pmQty').value='';$id('pmTotal').value='';$id('pmUnitPrice').value='';$id('pmUnit').value='';renderPML()}
 
 // ========================================
 // 手动录入的物品列表渲染
@@ -1665,32 +1668,33 @@ function renderPML() {
     var h = '';
 
     // 批量填充区域
-    if (_pmItems.length > 0) {
+            if (_pmItems.length > 0) {
         h += '<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';
-        h += '<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充空列:</div>';
+        h += '<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充:</div>';
 
-        // 来源
+        // 第1行：来源
         h += '<div class="hrow"><label>来源</label>';
         h += '<select class="inp" id="pmBatchSrc" style="max-width:110px"><option value="">不填充</option>';
         srcs.forEach(function(s) { h += '<option>' + s + '</option>'; });
         h += '</select>';
-        h += '<button class="btn s" onclick="batchFill(\'source\',document.getElementById(\'pmBatchSrc\').value)">应用</button>';
+        h += '</div>';
 
-        // 区域
-        h += '<label>区域</label>';
+        // 第2行：区域 + 分类（联动）
+        h += '<div class="hrow"><label>区域</label>';
         h += '<select class="inp" id="pmBatchSec" style="max-width:110px" onchange="batchSecChanged(this)"><option value="">不填充</option>';
         secs.forEach(function(s) { h += '<option>' + s + '</option>'; });
         h += '</select>';
-        h += '<button class="btn s" onclick="batchFill(\'section\',document.getElementById(\'pmBatchSec\').value)">应用</button></div>';
-
-        // 分类（跟随区域联动）
-        h += '<div class="hrow"><label>分类</label>';
-        h += '<select class="inp" id="pmBatchCat" style="max-width:130px" onchange="batchCatChanged(this)">';
+        h += '<label>分类</label>';
+        h += '<select class="inp" id="pmBatchCat" style="max-width:130px">';
         h += '<option value="">请先选区域</option>';
         h += '</select>';
-        h += '<button class="btn s" onclick="batchFill(\'category\',document.getElementById(\'pmBatchCat\').value)">应用</button></div>';
+        h += '<button class="btn s" onclick="batchFillAll()">全部应用</button>';
+        h += '</div>';
 
+        h += '</div>';
     }
+
+
 
     // 物品列表
     if (!_pmItems.length) {
@@ -1879,9 +1883,8 @@ function delAreaCat(name) {
 
 function restoreOneCat(name){var del={};try{del=JSON.parse(localStorage.getItem('ax_del_cats'))||{}}catch(e){}delete del[name];localStorage.setItem('ax_del_cats',JSON.stringify(del));toast('已恢复');manageCats()}
 
-function batchFill(field,value){if(!value)return;_pmItems.forEach(function(i){if(!i[field])i[field]=value});renderPML();toast('已填充')}
+function batchFill(field,value){if(!value)return;_pmItems.forEach(function(i){i[field]=value});renderPML();toast('已填充')}
 
-function batchFill(field,value){if(!value)return;_pmItems.forEach(function(i){if(!i[field])i[field]=value});renderPML();toast('已填充')}
 function pmEdit(idx,field,val){if(!_pmItems[idx])return;if(field==='qty'||field==='total'||field==='unitPrice')_pmItems[idx][field]=parseFloat(val)||0;else _pmItems[idx][field]=val}
 
 function saveMPur(){if(!_pmItems.length){toast('无物品');return}var savedItems=JSON.parse(JSON.stringify(_pmItems));var savedDate=$id('pmDate').value||td();if(_editPurId){upd(function(db){var idx=db.purchases.findIndex(function(p){return p.id==_editPurId});if(idx>=0){db.purchases[idx].items=savedItems;db.purchases[idx].date=savedDate;db.purchases[idx].source=$id('pmSrc').value||'外购'}});toast('已更新');_editPurId=null}else{var p={id:'p_'+Date.now(),date:savedDate,source:$id('pmSrc').value||'外购',items:savedItems};upd(function(db){db.purchases.push(p)});toast('已保存')}_pmItems=[];checkPurInvLink(savedItems,savedDate)}
@@ -2029,8 +2032,12 @@ function showPurDayModal(date) {
     var total = allItems.reduce(function(s, item) { return s + item.total; }, 0);
     var dateLabel = date.substring(5).replace('-', '/');
 
-    var h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    var  h = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">';
+    h += '<div style="display:flex;align-items:center;gap:6px">';
     h += '<h3 style="margin:0">' + dateLabel + ' 采购明细</h3>';
+    h += '<button class="btn s" style="font-size:.65rem;padding:2px 6px" onclick="editPurDate(\'' + date + '\')">改日期</button>';
+    h += '</div>';
+
     h += '<div style="display:flex;align-items:center;gap:8px">';
     h += '<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥' + fmtC(total) + '</span>';
     h += '<button class="btn s del-btn" onclick="delPurDay(\'' + date + '\')">删除当日</button>';
@@ -2483,6 +2490,33 @@ function delPurItemAndRefresh(date, name) {
     if (remaining.length) showPurDay(date);
     else { closeModal(); renderPHist(); }
 }
+
+//修改日期的弹窗，输入新日期，确认后更新数据库中所有该日期的采购记录，刷新日历和弹窗
+function editPurDate(oldDate) {
+    var h = '<div style="text-align:center;padding:10px">';
+    h += '<div style="font-size:.88rem;font-weight:700;margin-bottom:10px">修改日期</div>';
+    h += '<div class="hrow"><label>新日期</label><input class="inp" id="newPurDate" type="date" value="' + oldDate + '"></div>';
+    h += '<div class="brow" style="margin-top:10px">';
+    h += '<button class="btn p" onclick="doEditPurDate(\'' + oldDate + '\')">确认</button> ';
+    h += '<button class="btn" onclick="showPurDayModal(\'' + oldDate + '\')">取消</button>';
+    h += '</div></div>';
+    showModal(h, 350);
+}
+
+//修改日期后，更新数据库中所有该日期的采购记录，刷新日历和弹窗
+function doEditPurDate(oldDate) {
+    var newDate = document.getElementById('newPurDate').value;
+    if (!newDate || newDate === oldDate) { toast('日期未改变'); return; }
+    upd(function(db) {
+        db.purchases.forEach(function(p) {
+            if (p.date === oldDate) p.date = newDate;
+        });
+    });
+    toast('日期已改为 ' + newDate);
+    renderPHist();
+    showPurDayModal(newDate);
+}
+
 
 // ========================================
 // 日报明细弹窗
