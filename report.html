@@ -36,7 +36,7 @@ body{font-family:var(--fb);font-size:13px;background:var(--bg);color:var(--tx);m
 
 /* 卡片 */
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:var(--sp)}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:10px;text-align:center}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:10px;text-align:left}
 .card-l{font-size:.68rem;color:var(--tx-m);margin-bottom:4px}
 .card-v{font-size:.9rem;font-weight:700}
 .card-v.ac{color:var(--ac)}
@@ -47,7 +47,9 @@ body{font-family:var(--fb);font-size:13px;background:var(--bg);color:var(--tx);m
 .tw{overflow-x:auto;margin-bottom:var(--sp)}
 .tw table{width:100%;border-collapse:collapse;font-size:.78rem}
 .tw th{text-align:left;padding:6px 8px;background:var(--card-h);color:var(--tx-m);font-weight:600;border-bottom:1px solid var(--bd);font-size:.72rem;white-space:nowrap}
-.tw td{padding:6px 8px;border-bottom:1px solid var(--bd-l);white-space:nowrap}
+.tw td{padding:6px 8px;border-bottom:1px solid var(--bd-l);white-space:nowrap;text-align:left}
+.tw th{text-align:left}
+.tw .nr{text-align:right;font-family:var(--fm)}
 .tw .nr{text-align:right;font-family:var(--fm)}
 
 /* 图表 */
@@ -648,6 +650,30 @@ function testConnection(){
 // ========================================
 document.getElementById('headerDate').textContent=td();
 DB={dailyReports:[],purchases:[],expenses:[],teaItems:[],cigItems:[],alcItems:[],whItems:[],aiHistory:[],invoices:[],areaCats:{}};
+
+try{var cached=localStorage.getItem('ax_ro_cache');if(cached)DB=JSON.parse(cached)}catch(e){}
+
+if(!CFG.gh_token||!CFG.gh_gist_id){
+    curTab='settings';
+    document.querySelectorAll('.tab').forEach(function(t){t.className='tab'});
+    document.querySelectorAll('.tab')[5].className='tab active';
+    document.querySelectorAll('.report-page').forEach(function(p){p.className='report-page'});
+    $id('pageSettings').className='report-page active';
+    renderSettings();
+}else{
+    renderDash();
+    ghLoad().then(function(data){
+        if(data&&data.dailyReports){
+            DB=data;
+            try{localStorage.setItem('ax_ro_cache',JSON.stringify(DB))}catch(e){}
+            if(curTab==='dash')renderDash();
+            else if(curTab==='daily')renderDaily();
+            else if(curTab==='purchase')renderPurchase();
+            else if(curTab==='expense')renderExpense();
+            else if(curTab==='inv')renderInv();
+        }
+    });
+}
 
 // 加载本地缓存
 try{var cached=localStorage.getItem('ax_ro_cache');if(cached)DB=JSON.parse(cached)}catch(e){}
