@@ -8,6 +8,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Lexend:wght@400;500&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 <style>
+.container{text-align:left}
+.tw,.tw table,.tw th,.tw td{text-align:left!important}
+.cards .card{text-align:left!important}
+.card-l,.card-v{text-align:left!important}
+.report-page{text-align:left}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
 --bg:#f5f5f5;--card:#ffffff;--card-h:#f0f0f0;
@@ -36,7 +41,8 @@ body{font-family:var(--fb);font-size:13px;background:var(--bg);color:var(--tx);m
 
 /* 卡片 */
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:var(--sp)}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:10px;text-align:left}
+.cards .card{text-align:left}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:10px;}
 .card-l{font-size:.68rem;color:var(--tx-m);margin-bottom:4px}
 .card-v{font-size:.9rem;font-weight:700}
 .card-v.ac{color:var(--ac)}
@@ -45,7 +51,7 @@ body{font-family:var(--fb);font-size:13px;background:var(--bg);color:var(--tx);m
 
 /* 表格 */
 .tw{overflow-x:auto;margin-bottom:var(--sp)}
-.tw table{width:100%;border-collapse:collapse;font-size:.78rem}
+.tw table{width:100%;border-collapse:collapse;font-size:.78rem;text-align:left}
 .tw th{text-align:left;padding:6px 8px;background:var(--card-h);color:var(--tx-m);font-weight:600;border-bottom:1px solid var(--bd);font-size:.72rem;white-space:nowrap}
 .tw td{padding:6px 8px;border-bottom:1px solid var(--bd-l);white-space:nowrap;text-align:left}
 .tw th{text-align:left}
@@ -139,12 +145,12 @@ function getMR(ym){return(DB.dailyReports||[]).filter(function(r){return r.date&
 function invCalc(item,type){
     var stock=0;
     if(type==='tea'){
-        stock=parseFloat(item.opening)||0;
+        stock=parseInt(item.openingStock||item.opening)||0;
         (item.purchases||[]).forEach(function(p){stock+=parseFloat(p.qty)||0});
         (item.sales||[]).forEach(function(s){stock-=parseFloat(s.qty||s.totalQty||0)||0});
         stock=Math.round(stock*10)/10;
     }else{
-        stock=parseInt(item.opening)||0;
+        stock=parseInt(item.openingStock||item.opening)||0;
         (item.purchases||[]).forEach(function(p){stock+=parseInt(p.qty)||0});
         (item.sales||[]).forEach(function(s){stock-=parseInt(s.qty||0)||0});
     }
@@ -523,13 +529,15 @@ function renderInv(){
 
         h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:12px">';
         h+='<div style="font-size:.84rem;font-weight:700;color:var(--ac);margin-bottom:8px">'+INV[type].label+'</div>';
-        h+='<div class="tw"><table><tr><th>品名</th><th>库存</th><th>本月销售</th><th>本月实收</th></tr>';
+        h+='<div class="tw"><table><tr><th>品名</th><th>期初</th><th>库存</th><th>本月销售</th><th>本月实收</th></tr>';
 
         items.forEach(function(item){
             var c=invCalc(item,type);
             var mc=invCalcMon(item,type,ym);
             h+='<tr><td>'+item.name+'</td>';
+            h+='<td class="nr">'+(parseInt(item.openingStock||item.opening)||0)+(type==='tea'?'克':unit)+'</td>';
             h+='<td class="nr">'+c.stock+(type==='tea'?'克':unit)+'</td>';
+
             var salesQty=0;
             (item.sales||[]).forEach(function(s){if(s.date&&s.date.startsWith(ym))salesQty+=(s.qty||s.cups||0)});
             h+='<td class="nr">'+salesQty+(type==='tea'?'杯':unit)+'</td>';
