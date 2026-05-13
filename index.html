@@ -43,6 +43,15 @@ textarea,.inp{background:var(--sf);border:1px solid var(--bd);border-radius:6px;
 @media(max-width:600px){.cards{grid-template-columns:repeat(2,1fr)}.card-v{font-size:.95rem}.main{padding:16px 14px 40px}.hrow{flex-direction:column;gap:6px}.hrow .inp,.hrow label{width:100%;text-align:left;min-width:auto}.hrow label{padding-right:0}}
 @keyframes aiSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 select{text-align:left!important;text-align-last:left!important;}
+.hrow{align-items:center!important;justify-content:flex-start!important}
+.hrow .inp,.hrow select.inp,.hrow label{flex-shrink:0}
+@media(max-width:600px){
+    .hrow{flex-wrap:wrap!important;align-items:center!important;gap:4px 0}
+    .hrow label{margin-left:8px!important;flex-shrink:0;white-space:nowrap}
+    .hrow .inp,.hrow select.inp{flex:none!important;width:auto!important;min-width:0;text-align:left!important;text-align-last:left!important}
+    .hrow select.inp{max-width:110px!important}
+    .hrow input[type=date].inp{max-width:150px!important}
+}
 </style>
 </head>
 <body>
