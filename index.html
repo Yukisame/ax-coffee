@@ -1309,12 +1309,14 @@ function doAIParse(){
             var img=new Image();
             img.onload=function(){
                 var canvas=document.createElement('canvas');
-                var maxW=1600;
+                var maxW=window.innerWidth<600?1000:1600;
                 var w=img.width,h=img.height;
-                if(w>maxW){h=h*maxW/w;w=maxW}
+                if(w>maxW){h=Math.round(h*maxW/w);w=maxW}
                 canvas.width=w;canvas.height=h;
                 canvas.getContext('2d').drawImage(img,0,0,w,h);
-                var base64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
+                var quality=window.innerWidth<600?0.6:0.85;
+                var base64=canvas.toDataURL('image/jpeg',quality).split(',')[1];
+                console.log('图片压缩: '+w+'x'+h+' 质量:'+quality+' 大小:'+Math.round(base64.length/1024)+'KB');
                 var prompt='请识别这张采购单/出库单图片，提取所有商品信息。\n请严格按以下JSON格式返回，不要有任何其他文字：\n\n{\n  "date": "YYYY-MM-DD",\n  "source": "供应商名称",\n  "items": [\n    {"name": "商品名称", "qty": 数字, "unit": "单位", "unitPrice": 单价, "total": 金额}\n  ]\n}\n\n注意：qty是发货数量，只返回JSON。';
                 var body={model:localStorage.getItem('ax_mimo_model')||'mimo-v2.5',messages:[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+base64}}]}],max_tokens:4096,temperature:0.1};
                 var ep=localStorage.getItem('ax_mimo_ep');
@@ -1374,7 +1376,12 @@ function doAIParseGo(){
             showMimoConfirm();
         }catch(e){toast('解析失败');console.error(e)}
     };
-    xhr.onerror=function(){hideAILoading();toast('请求失败');};
+    xhr.onerror=function(){
+    hideAILoading();
+    var size=window._pendingMimoBody?JSON.stringify(window._pendingMimoBody).length:0;
+    toast('请求失败'+(size>500000?' (图片过大:'+Math.round(size/1024)+'KB)':''));
+    };
+
     xhr.ontimeout=function(){hideAILoading();toast('请求超时');};
     xhr.send(JSON.stringify(body));
 }
@@ -3735,38 +3742,17 @@ function applySpacing(){
         root.style.setProperty('--sp-l','16px');
     }
 }
-function rData(){var curH=localStorage.getItem('ax_font_heading')||'',curB=localStorage.getItem('ax_font_body')||'',curN=localStorage.getItem('ax_font_number')||'',curFS=localStorage.getItem('ax_fs')||'13.5';
+function rData(){var h='';var curH=localStorage.getItem('ax_font_heading')||'',curB=localStorage.getItem('ax_font_body')||'',curN=localStorage.getItem('ax_font_number')||'',curFS=localStorage.getItem('ax_fs')||'13.5';
 h+='<div class="sec">显示设置</div>';
 h+='<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 
-// 第1行：主题风格 + 字体大小
-h+='<div class="hrow" style="margin-bottom:8px">';
-h+='<label>主题风格</label>';
-h+='<select class="inp" onchange="setTheme(this.value)">';
-var themes=['默认深色','泸汀初雪','远山速影','桃枝照水','窗纱香灰','陶碗酒痕','疏林茶烟'];
-var curTheme=localStorage.getItem('ax_theme')||'默认深色';
-themes.forEach(function(t){h+='<option'+(curTheme===t?' selected':'')+'>'+t+'</option>'});
-h+='</select>';
-h+='<label>字体大小</label>';
-h+='<select class="inp" onchange="setFontSize(this.value)">';
-var sizes=[{v:'12',l:'小 12px'},{v:'13',l:'标准 13px'},{v:'14',l:'中 14px'},{v:'15',l:'大 15px'},{v:'17',l:'特大 17px'},{v:'19',l:'超大 19px'}];
-var curFS=localStorage.getItem('ax_fs')||'13';
-sizes.forEach(function(s){h+='<option value="'+s.v+'"'+(curFS===s.v?' selected':'')+'>'+s.l+'</option>'});
-h+='</select>';
-h+='</div>';
-
-// 第2行：标题字体 + 正文字体 + 数字字体
+// 第1行：标题字体 + 正文字体 + 数字字体
 h+='<div class="hrow" style="margin-bottom:8px">';
 h+='<label>标题</label>';
 h+='<select class="inp" onchange="setFontSetting(\'heading\',this.value)">';
 var headingFonts=[
     {v:'',l:'默认'},{v:'noto-serif',l:'思源宋体'},{v:'noto-sans',l:'思源黑体'},
-    {v:'dm-serif',l:'DM Serif'},{v:'syne',l:'Syne'},{v:'bebas',l:'Bebas'},
-    {v:'instrument',l:'Instrument'},{v:'playfair',l:'Playfair'},{v:'cormorant',l:'Cormorant'},
-    {v:'lxgw-serif',l:'霞鹜文楷'},{v:'cinzel',l:'Cinzel'},{v:'merriweather',l:'Merriweather'},
-    {v:'raleway',l:'Raleway'},{v:'ma-shan',l:'毛笔楷'},{v:'zcool-xiaowei',l:'站酷小薇'},
-    {v:'zcool-kuaile',l:'站酷快乐'},{v:'long-cang',l:'龙藏体'},{v:'liu-jian',l:'流江毛草'},
-    {v:'zhi-mang',l:'志莽行书'},{v:'unifraktur',l:'哥特体'}
+    {v:'lxgw-serif',l:'霞鹜文楷'}
 ];
 var curH=localStorage.getItem('ax_font_heading')||'';
 headingFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curH===f.v?' selected':'')+'>'+f.l+'</option>'});
@@ -3775,9 +3761,7 @@ h+='<label>正文</label>';
 h+='<select class="inp" onchange="setFontSetting(\'body\',this.value)">';
 var bodyFonts=[
     {v:'',l:'默认'},{v:'noto-sans',l:'思源黑体'},{v:'lxgw-wenkai',l:'霞鹜文楷'},
-    {v:'source-serif',l:'Source Serif'},{v:'crimson',l:'Crimson'},{v:'lora',l:'Lora'},
-    {v:'dm-sans',l:'DM Sans'},{v:'merriweather',l:'Merriweather'},{v:'raleway',l:'Raleway'},
-    {v:'long-cang',l:'龙藏体'},{v:'ma-shan',l:'毛笔楷'}
+    {v:'ma-shan',l:'毛笔楷'}
 ];
 var curB=localStorage.getItem('ax_font_body')||'';
 bodyFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curB===f.v?' selected':'')+'>'+f.l+'</option>'});
@@ -3786,17 +3770,21 @@ h+='<label>数字</label>';
 h+='<select class="inp" onchange="setFontSetting(\'number\',this.value)">';
 var numberFonts=[
     {v:'',l:'默认'},{v:'dm-mono',l:'DM Mono'},{v:'lexend',l:'Lexend'},
-    {v:'noto-sans',l:'黑体'},{v:'courier',l:'Courier'},{v:'jetbrains',l:'JetBrains'},
-    {v:'fira',l:'Fira Code'},{v:'ibm-plex',l:'IBM Plex'},{v:'bebas',l:'Bebas'},
-    {v:'cinzel',l:'Cinzel'}
+    {v:'noto-sans',l:'黑体'}
 ];
 var curN=localStorage.getItem('ax_font_number')||'';
 numberFonts.forEach(function(f){h+='<option value="'+f.v+'"'+(curN===f.v?' selected':'')+'>'+f.l+'</option>'});
 h+='</select>';
 h+='</div>';
 
-// 第3行：圆角大小 + 页面间距
+// 第2行：字体大小 + 圆角 + 间距
 h+='<div class="hrow">';
+h+='<label>字体</label>';
+h+='<select class="inp" onchange="setFontSize(this.value)">';
+var sizes=[{v:'12',l:'小 12px'},{v:'13',l:'标准 13px'},{v:'14',l:'中 14px'},{v:'15',l:'大 15px'},{v:'17',l:'特大 17px'},{v:'19',l:'超大 19px'}];
+var curFS=localStorage.getItem('ax_fs')||'13';
+sizes.forEach(function(s){h+='<option value="'+s.v+'"'+(curFS===s.v?' selected':'')+'>'+s.l+'</option>'});
+h+='</select>';
 h+='<label>圆角</label>';
 h+='<select class="inp" onchange="setRadius(this.value)">';
 var radiuses=[{v:'6',l:'小 6px'},{v:'10',l:'中 10px'},{v:'14',l:'大 14px'},{v:'20',l:'圆润 20px'}];
@@ -3811,9 +3799,11 @@ spacings.forEach(function(s){h+='<option value="'+s.v+'"'+(curS===s.v?' selected
 h+='</select>';
 h+='</div>';
 
+
 h+='</div>';
 
 
+// MiMo配置
 h += '<div class="sec">MiMo配置</div>';
 h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">';
 h += '<p style="font-size:.74rem;color:var(--tx-s);margin-bottom:10px">用于采购单拍照识别，接入小米MiMo视觉API</p>';
