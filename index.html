@@ -2531,6 +2531,10 @@ function renderInvHist(type){
     }
     h+='</div>';
 
+    if(!monthTotal){
+        h+='<div style="text-align:center;padding:20px;color:var(--tx-m);font-size:.78rem">本月暂无销售记录</div>';
+    }
+
     el.innerHTML=h;
 }
 function showInvDayModal(type,date){
