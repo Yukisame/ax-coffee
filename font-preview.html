@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>字体预览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:wght@300;600&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&family=DM+Serif+Display&family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500&family=Lora:wght@400;600&family=LXGW+WenKai:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:wght@400;700&family=Source+Serif+4:wght@400;600&family=Syne:wght@400;700&family=Crimson+Pro:wght@400;600&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=ZCOOL+KuaiLe&family=Long+Cang&family=Liu+Jian+Mao+Cao&family=Zhi+Mang+Xing&family=UnifrakturMaguntia&family=Cinzel:wght@400;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Noto Serif SC",serif;font-size:13px;background:#1a1a1a;color:#e0e0e0;padding:16px;max-width:600px;margin:0 auto}
+h1{text-align:center;font-size:1.2rem;color:#d4a853;margin-bottom:6px}
+.sub{text-align:center;font-size:.72rem;color:#888;margin-bottom:20px}
+.section{font-size:.82rem;font-weight:700;color:#d4a853;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid #333}
+.font-card{background:#222;border:1px solid #333;border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.font-card:hover{border-color:#d4a853;background:#2a2a2a}
+.font-card.selected{border-color:#d4a853;background:#252218}
+.font-name{font-size:.72rem;color:#888;margin-bottom:2px}
+.font-sample-title{font-size:1.1rem;font-weight:700;margin-bottom:6px;color:#e8e4dc}
+.font-sample-body{font-size:.88rem;line-height:1.8;color:#c0b8a8;margin-bottom:4px}
+.font-sample-num{font-size:1rem;margin-bottom:4px;color:#d4a853}
+.font-sample-btn{display:inline-block;padding:4px 12px;border-radius:6px;font-size:.72rem;margin-right:6px;border:1px solid #444;background:#333;color:#ccc}
+.font-tag{display:inline-block;font-size:.58rem;padding:2px 6px;border-radius:3px;background:#333;color:#888;margin-left:6px}
+</style>
+</head>
+<body>
+
+<h1>字体预览</h1>
+<div class="sub">点击选择你喜欢的字体，然后告诉我编号</div>
+
+<div class="section">一、标题字体</div>
+<div id="headingFonts"></div>
+
+<div class="section">二、正文字体</div>
+<div id="bodyFonts"></div>
+
+<div class="section">三、数字字体</div>
+<div id="numberFonts"></div>
+
+<script>
+var headingFonts = [
+    { id: 'H1',  val: '',              name: 'Playfair Display',      family: '"Playfair Display",serif',                tag: '默认',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H2',  val: 'noto-serif',    name: '思源宋体',               family: '"Noto Serif SC",serif',                   tag: '宋体',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H3',  val: 'noto-sans',     name: '思源黑体',               family: '"Noto Sans SC",sans-serif',               tag: '黑体',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H4',  val: 'dm-serif',      name: 'DM Serif',              family: '"DM Serif Display",serif',                tag: '衬线',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H5',  val: 'syne',          name: 'Syne',                  family: '"Syne",sans-serif',                       tag: '现代',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H6',  val: 'bebas',         name: 'Bebas Neue',            family: '"Bebas Neue",sans-serif',                 tag: '粗体',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H7',  val: 'instrument',    name: 'Instrument Serif',      family: '"Instrument Serif",serif',                tag: '优雅',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H8',  val: 'cormorant',     name: 'Cormorant Garamond',    family: '"Cormorant Garamond",serif',              tag: '古典',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H9',  val: 'lxgw-serif',    name: '霞鹜文楷',               family: '"LXGW WenKai",serif',                     tag: '手写',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H10', val: 'cinzel',        name: 'Cinzel',                family: '"Cinzel",serif',                          tag: '罗马',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H11', val: 'merriweather',  name: 'Merriweather',          family: '"Merriweather",serif',                    tag: '优雅',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H12', val: 'raleway',       name: 'Raleway',               family: '"Raleway",sans-serif',                    tag: '现代',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H13', val: 'ma-shan',       name: '马善政毛笔楷',           family: '"Ma Shan Zheng",cursive',                 tag: '毛笔',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H14', val: 'zcool-xiaowei', name: '站酷小薇',               family: '"ZCOOL XiaoWei",serif',                   tag: '文艺',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H15', val: 'zcool-kuaile',  name: '站酷快乐体',             family: '"ZCOOL KuaiLe",cursive',                  tag: '活泼',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H16', val: 'long-cang',     name: '龙藏体',                 family: '"Long Cang",cursive',                     tag: '手写',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H17', val: 'liu-jian',      name: '流江毛草',               family: '"Liu Jian Mao Cao",cursive',              tag: '草书',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H18', val: 'zhi-mang',      name: '志莽行书',               family: '"Zhi Mang Xing",cursive',                 tag: '行书',   sample: '岸香咖啡弘皓大厦店' },
+    { id: 'H19', val: 'unifraktur',    name: 'Unifraktur（哥特）',     family: '"UnifrakturMaguntia",cursive',            tag: '哥特',   sample: '岸香咖啡弘皓大厦店' }
+];
+
+var bodyFonts = [
+    { id: 'B1',  val: '',              name: '思源宋体（默认）',       family: '"Noto Serif SC",serif',                   tag: '默认',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B2',  val: 'noto-sans',     name: '思源黑体',               family: '"Noto Sans SC",sans-serif',               tag: '黑体',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B3',  val: 'lxgw-wenkai',   name: '霞鹜文楷',               family: '"LXGW WenKai",serif',                     tag: '手写',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B4',  val: 'source-serif',  name: 'Source Serif',           family: '"Source Serif 4",serif',                  tag: '衬线',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B5',  val: 'crimson',       name: 'Crimson Pro',            family: '"Crimson Pro",serif',                     tag: '古典',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B6',  val: 'lora',          name: 'Lora',                   family: '"Lora",serif',                            tag: '温和',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B7',  val: 'dm-sans',       name: 'DM Sans',                family: '"DM Sans",sans-serif',                    tag: '无衬线', sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B8',  val: 'merriweather',  name: 'Merriweather',           family: '"Merriweather",serif',                    tag: '优雅',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B9',  val: 'raleway',       name: 'Raleway',                family: '"Raleway",sans-serif',                    tag: '现代',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B10', val: 'long-cang',     name: '龙藏体',                  family: '"Long Cang",cursive',                     tag: '手写',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' },
+    { id: 'B11', val: 'ma-shan',       name: '马善政毛笔楷',            family: '"Ma Shan Zheng",cursive',                 tag: '毛笔',   sample: '好的，以下是5月1日完整采购明细。厨房调料/粮油单本页合计318.04元。' }
+];
+
+var numberFonts = [
+    { id: 'N1',  val: '',              name: 'DM Mono（默认）',        family: '"DM Mono","Lexend",monospace',            tag: '默认',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N2',  val: 'dm-mono',       name: 'DM Mono',                family: '"DM Mono",monospace',                     tag: '等宽',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N3',  val: 'lexend',        name: 'Lexend',                 family: '"Lexend",monospace',                      tag: '现代',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N4',  val: 'noto-sans',     name: '黑体数字',               family: '"Noto Sans SC",sans-serif',               tag: '黑体',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N5',  val: 'courier',       name: 'Courier New',            family: '"Courier New",monospace',                 tag: '经典',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N6',  val: 'jetbrains',     name: 'JetBrains Mono',         family: '"JetBrains Mono",monospace',              tag: '编程',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N7',  val: 'fira',          name: 'Fira Code',              family: '"Fira Code",monospace',                   tag: '编程',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N8',  val: 'ibm-plex',      name: 'IBM Plex Mono',          family: '"IBM Plex Mono",monospace',               tag: 'IBM',    sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N9',  val: 'bebas',         name: 'Bebas Neue',             family: '"Bebas Neue",sans-serif',                 tag: '大号',   sample: '¥12,345.67  87.20  318.04' },
+    { id: 'N10', val: 'cinzel',        name: 'Cinzel',                 family: '"Cinzel",serif',                          tag: '罗马',   sample: '¥12,345.67  87.20  318.04' }
+];
+
+function renderFonts(fonts, containerId, type) {
+    var container = document.getElementById(containerId);
+    var h = '';
+    fonts.forEach(function(f) {
+        h += '<div class="font-card" onclick="this.classList.toggle(\'selected\')">';
+        h += '<div class="font-name">' + f.id + ' · ' + f.name + '<span class="font-tag">' + f.tag + '</span></div>';
+
+        if (type === 'heading') {
+            h += '<div class="font-sample-title" style="font-family:' + f.family + '">' + f.sample + '</div>';
+            h += '<div class="font-sample-body" style="font-family:' + f.family + '">Financial Report · 2026.05</div>';
+        } else if (type === 'body') {
+            h += '<div class="font-sample-body" style="font-family:' + f.family + '">' + f.sample + '</div>';
+        } else {
+            h += '<div class="font-sample-num" style="font-family:' + f.family + '">' + f.sample + '</div>';
+            h += '<div class="font-sample-body" style="font-family:' + f.family + '">毛利4,145.00  毛利率33.6%</div>';
+        }
+
+        h += '<div style="font-size:.65rem;color:#555;margin-top:4px">val: ' + (f.val || '(默认)') + '</div>';
+        h += '</div>';
+    });
+    container.innerHTML = h;
+}
+
+renderFonts(headingFonts, 'headingFonts', 'heading');
+renderFonts(bodyFonts, 'bodyFonts', 'body');
+renderFonts(numberFonts, 'numberFonts', 'number');
+</script>
+</body>
+</html>
