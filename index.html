@@ -1050,6 +1050,7 @@ select.inp option {
   color: var(--text-secondary);
 }
 
+
 /* ==================== 主内容区（替换旧 .main） ==================== */
 .main-content {
     margin-left: 60px;
@@ -1212,6 +1213,184 @@ select.inp option {
 
 </head>
 <body>
+<style>
+/* ---- 自定义日期选择器 ---- */
+.date-picker {
+    position: absolute;
+    z-index: 10000;
+    width: 300px;
+    background: var(--card);
+    border: 1px solid var(--bd);
+    border-radius: 20px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    padding: 16px;
+    font-family: var(--fm);
+    animation: dpFadeIn .15s ease;
+}
+@keyframes dpFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.dp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding: 0 2px;
+}
+.dp-title {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--tx);
+}
+.dp-nav {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--card-h);
+    color: var(--tx-m);
+    border-radius: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--fm);
+}
+.dp-nav:hover {
+    background: var(--bd);
+    color: var(--tx);
+}
+.dp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 6px;
+}
+.dp-wd {
+    text-align: center;
+    font-size: .68rem;
+    font-weight: 600;
+    color: var(--tx-s);
+    padding: 6px 0;
+}
+.dp-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+.dp-day {
+    text-align: center;
+    padding: 8px 0;
+    font-size: .82rem;
+    color: var(--tx);
+    border-radius: 10px;
+    cursor: pointer;
+    line-height: 1;
+    position: relative;
+}
+.dp-day:hover {
+    background: var(--card-h);
+}
+.dp-day.dp-empty {
+    cursor: default;
+}
+.dp-day.dp-empty:hover {
+    background: transparent;
+}
+.dp-day.dp-today {
+    font-weight: 700;
+    color: var(--ac);
+}
+.dp-day.dp-today::after {
+    content: "";
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--ac);
+}
+.dp-day.dp-selected {
+    background: var(--ac);
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px rgba(161,193,161,0.35);
+}
+.dp-day.dp-selected:hover {
+    background: var(--ac);
+}
+.dp-day.dp-selected::after {
+    display: none;
+}
+.dp-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--bd);
+}
+.dp-btn {
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: .78rem;
+    font-family: var(--fm);
+    cursor: pointer;
+}
+.dp-btn-today {
+    background: var(--ac);
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.dp-btn-today:hover {
+    box-shadow: 0 2px 8px rgba(161,193,161,0.35);
+}
+.dp-btn-clear {
+    background: var(--card-h);
+    color: var(--tx-m);
+    border: 1px solid var(--bd);
+}
+.dp-btn-clear:hover {
+    color: var(--rd);
+    border-color: var(--rd);
+}
+.dp-months {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+.dp-month {
+    text-align: center;
+    padding: 12px 0;
+    font-size: .82rem;
+    color: var(--tx);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.dp-month:hover {
+    background: var(--card-h);
+}
+.dp-month.dp-today {
+    font-weight: 700;
+    color: var(--ac);
+}
+.dp-month.dp-selected {
+    background: var(--ac);
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,.15);
+    box-shadow: 0 2px 8px rgba(161,193,161,.35);
+}
+.dp-month.dp-selected:hover {
+    background: var(--ac);
+}
+
+</style>
 
 <!-- 遮罩层 -->
 <div class="toolbar-mask" id="toolbarMask" onclick="toggleToolbar()"></div>
@@ -1261,6 +1440,10 @@ select.inp option {
   <span id="headerDate" style="font-size:.72rem;color:var(--text-muted);white-space:nowrap"></span>
 </div>
 </div>
+
+<!-- 自定义日期选择器 -->
+<div id="datePicker" class="date-picker" style="display:none"><div id="dpBody"></div></div>
+
 
 <!-- ==================== 主内容区 ==================== -->
 <div class="main-content" id="mainContent">
@@ -1581,6 +1764,253 @@ function handleDmgPhoto(e) {
     if (!f) return;
     processImage(f, 800, function(d) { _dmgPhotoData = d; toast('已选择照片'); });
 }
+
+// ======= 日期选择器组件 ========
+var _dpTarget = null;
+var _dpDate = null;
+var _dpSelected = null;
+
+function _dpOpen(inputId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    _dpTarget = input;
+    var val = input.value;
+    if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        var parts = val.split('-');
+        _dpDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+        _dpSelected = val;
+    } else {
+        _dpDate = new Date();
+        _dpDate.setDate(1);
+        _dpSelected = null;
+    }
+    _dpRender();
+    var el = document.getElementById('datePicker');
+    el.style.display = 'block';
+    var rect = input.getBoundingClientRect();
+    el.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+    var left = rect.left + window.scrollX;
+    if (left + 300 > window.innerWidth) left = window.innerWidth - 310;
+    if (left < 8) left = 8;
+    el.style.left = left + 'px';
+    setTimeout(function() {
+        document.addEventListener('click', _dpOutside);
+    }, 50);
+}
+
+function _dpClose() {
+    var el = document.getElementById('datePicker');
+    if (el) el.style.display = 'none';
+    _dpTarget = null;
+    document.removeEventListener('click', _dpOutside);
+}
+
+function _dpOutside(e) {
+    var el = document.getElementById('datePicker');
+    if (!el) return;
+    var rect = el.getBoundingClientRect();
+    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        _dpClose();
+    }
+}
+
+function _dpNav(dir) {
+    _dpDate.setMonth(_dpDate.getMonth() + dir);
+    _dpRender();
+}
+
+function _dpSel(dateStr) {
+    _dpSelected = dateStr;
+    if (_dpTarget) {
+        _dpTarget.value = dateStr;
+        _dpTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        _dpTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    _dpClose();
+}
+
+function _dpToday() {
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var d = String(now.getDate()).padStart(2, '0');
+    _dpSel(y + '-' + m + '-' + d);
+}
+
+function _dpClear() {
+    if (_dpTarget) {
+        _dpTarget.value = '';
+        _dpTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        _dpTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    _dpClose();
+}
+
+function _dpRender() {
+    var el = document.getElementById('dpBody');
+    if (!el) return;
+    var year = _dpDate.getFullYear();
+    var month = _dpDate.getMonth();
+    var today = new Date();
+    var todayStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var firstDay = new Date(year, month, 1).getDay();
+    firstDay = firstDay === 0 ? 6 : firstDay - 1;
+    var monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+    var h = '<div class="dp-header">';
+    h += '<button class="dp-nav" onclick="_dpNav(-1)">&#8249;</button>';
+    h += '<span class="dp-title">' + year + '年 ' + monthNames[month] + '</span>';
+    h += '<button class="dp-nav" onclick="_dpNav(1)">&#8250;</button>';
+    h += '</div>';
+
+    h += '<div class="dp-weekdays">';
+    ['一','二','三','四','五','六','日'].forEach(function(w) {
+        h += '<div class="dp-wd">' + w + '</div>';
+    });
+    h += '</div>';
+
+    h += '<div class="dp-days">';
+    for (var i = 0; i < firstDay; i++) {
+        h += '<div class="dp-day dp-empty"></div>';
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+        var ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        var cls = 'dp-day';
+        if (ds === todayStr) cls += ' dp-today';
+        if (ds === _dpSelected) cls += ' dp-selected';
+        h += '<div class="' + cls + '" onclick="_dpSel(\'' + ds + '\')">' + d + '</div>';
+    }
+    h += '</div>';
+
+    h += '<div class="dp-footer">';
+    h += '<button class="dp-btn dp-btn-today" onclick="_dpToday()">今天</button>';
+    h += '<button class="dp-btn dp-btn-clear" onclick="_dpClear()">清除</button>';
+    h += '</div>';
+
+    el.innerHTML = h;
+}
+
+// 初始化日期选择器 DOM
+function initDatePicker() {
+    if (document.getElementById('datePicker')) return;
+    var div = document.createElement('div');
+    div.id = 'datePicker';
+    div.className = 'date-picker';
+    div.style.display = 'none';
+    div.innerHTML = '<div id="dpBody"></div>';
+    document.body.appendChild(div);
+}
+
+// 在页面加载时初始化
+initDatePicker();
+
+// ======= 月份选择器组件 ========
+var _mpTarget = null;
+var _mpYear = null;
+
+function _mpOpen(inputId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    _mpTarget = input;
+    var val = input.value;
+    if (val && /^\d{4}-\d{2}$/.test(val)) {
+        _mpYear = parseInt(val.split('-')[0]);
+    } else {
+        _mpYear = new Date().getFullYear();
+    }
+    _mpRender();
+    var el = document.getElementById('datePicker');
+    el.style.display = 'block';
+    var rect = input.getBoundingClientRect();
+    el.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+    var left = rect.left + window.scrollX;
+    if (left + 300 > window.innerWidth) left = window.innerWidth - 310;
+    if (left < 8) left = 8;
+    el.style.left = left + 'px';
+    setTimeout(function() {
+        document.addEventListener('click', _mpOutside);
+    }, 50);
+}
+
+function _mpClose() {
+    var el = document.getElementById('datePicker');
+    if (el) el.style.display = 'none';
+    _mpTarget = null;
+    document.removeEventListener('click', _mpOutside);
+}
+
+function _mpOutside(e) {
+    var el = document.getElementById('datePicker');
+    if (!el) return;
+    var rect = el.getBoundingClientRect();
+    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        _mpClose();
+    }
+}
+function _mpNav(dir) {
+    _mpYear += dir;
+    _mpRender();
+}
+
+function _mpSel(ym) {
+    if (_mpTarget) {
+        _mpTarget.value = ym;
+        _mpTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        _mpTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    _mpClose();
+}
+
+function _mpRender() {
+    var el = document.getElementById('dpBody');
+    if (!el) return;
+    var now = new Date();
+    var thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    var selected = _mpTarget ? _mpTarget.value : '';
+    var monthNames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+    var h = '<div class="dp-header">';
+    h += '<button class="dp-nav" onclick="_mpNav(-1)">&#8249;</button>';
+    h += '<span class="dp-title">' + _mpYear + '年</span>';
+    h += '<button class="dp-nav" onclick="_mpNav(1)">&#8250;</button>';
+    h += '</div>';
+
+    h += '<div class="dp-months">';
+    for (var m = 1; m <= 12; m++) {
+        var ym = _mpYear + '-' + String(m).padStart(2, '0');
+        var cls = 'dp-month';
+        if (ym === thisMonth) cls += ' dp-today';
+        if (ym === selected) cls += ' dp-selected';
+        h += '<div class="' + cls + '" onclick="_mpSel(\'' + ym + '\')">' + monthNames[m - 1] + '</div>';
+    }
+    h += '</div>';
+
+    h += '<div class="dp-footer">';
+    h += '<button class="dp-btn dp-btn-today" onclick="_mpThisMonth()">本月</button>';
+    h += '<button class="dp-btn dp-btn-clear" onclick="_mpClear()">清除</button>';
+    h += '</div>';
+
+    el.innerHTML = h;
+}
+
+function _mpThisMonth() {
+    var now = new Date();
+    var ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    _mpSel(ym);
+}
+
+function _mpClear() {
+    if (_mpTarget) {
+        _mpTarget.value = '';
+        _mpTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        _mpTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    _mpClose();
+}
+
 
 
 // ==================== 3. 搜索模块 ====================
@@ -2258,7 +2688,7 @@ function rDaily() {
 
     // 手动页
     h += '<div id="dMan" style="display:none">';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="dmDate" type="date" value="' + td() + '"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="dmDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'dmDate\')" style="cursor:pointer"></div>';
     h += '<div class="section-label">经营数据</div><div id="dmFreeList"></div>';
     h += '<div class="section-label">茗茶销售</div><div id="dmTeaList"></div>';
     h += '<div class="section-label">香烟销售</div><div id="dmCigList"></div>';
@@ -2268,7 +2698,7 @@ function rDaily() {
 
     // 明细页
     h += '<div id="dHist" style="display:none">';
-    h += '<div class="hrow"><label>月份</label><input class="inp" id="dhM" type="month" value="' + curYM() + '" style="max-width:180px" onchange="renderDHist()"></div>';
+    h += '<div class="hrow"><label>月份</label><input class="inp" id="dhM" type="text" readonly placeholder="选择月份" value="' + curYM() + '" onclick="_mpOpen(\'dhM\')" onchange="renderDHist()" style="max-width:180px;cursor:pointer"></div>';
     h += '<div id="dhArea"></div>';
     h += '</div>';
 
@@ -3674,7 +4104,7 @@ function rPurchase() {
 
     // 日期和来源
     h += '<div class="hrow">';
-    h += '<label>日期</label><input class="inp" id="pmDate" type="date" value="' + td() + '" style="max-width:150px">';
+    h += '<label>日期</label><input class="inp" id="pmDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'pmDate\')" style="max-width:150px;cursor:pointer">';
     h += '<label>来源</label><select class="inp" id="pmSrc" style="max-width:120px">';
     h += '<option>岸香贸易</option><option>外购</option></select>';
     h += '</div>';
@@ -3718,7 +4148,7 @@ function rPurchase() {
     // 明细页
     h += '<div id="pHist" style="display:none">';
     h += '<div class="hrow"><label>月份</label>';
-    h += '<input class="inp" id="pHistM" type="month" value="' + curYM() + '" style="max-width:180px" onchange="renderPHist()"></div>';
+    h += '<input class="inp" id="pHistM" type="text" readonly placeholder="选择月份" value="' + curYM() + '" onclick="_mpOpen(\'pHistM\')" onchange="renderPHist()" style="max-width:180px;cursor:pointer"></div>';
     h += '<div id="pHistArea"></div>';
     h += '</div>';
 
@@ -4473,7 +4903,7 @@ function editPurByDate(date, name) {
     var cats = getPurCats(found.section);
 
     var h = '<h3>编辑物品</h3>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="epi_date" type="date" style="max-width:160px" value="' + foundP.date + '"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="epi_date" type="text" readonly placeholder="选择日期" value="' + foundP.date + '" onclick="_dpOpen(\'epi_date\')" style="max-width:160px;cursor:pointer"></div>';
     h += '<div class="hrow"><label>品名</label><input class="inp" id="epi_name" style="flex:2" value="' + found.name.replace(/"/g, '&quot;') + '"></div>';
     h += '<div class="hrow"><label>区域</label><select class="inp" id="epi_sec" style="max-width:110px" onchange="epiSecChanged(this)">';
     h += '<option value="">-</option>';
@@ -4794,7 +5224,7 @@ function returnPurItem(date, name) {
     h += '<div class="pv-row"><span class="k">单价</span><span>' + fmtC(orig.unitPrice || 0) + '</span></div>';
 
     h += '<div class="section-label">退货信息</div>';
-    h += '<div class="hrow"><label>退货日期</label><input class="inp" id="retDate" type="date" value="' + td() + '" style="max-width:150px"></div>';
+    h += '<div class="hrow"><label>退货日期</label><input class="inp" id="retDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'retDate\')" style="max-width:150px;cursor:pointer"></div>';
     h += '<div class="hrow"><label>退货数量</label><input class="inp" id="retQty" type="number" step="0.01" value="' + orig.qty + '" style="max-width:100px" oninput="calcReturnTotal()"></div>';
     h += '<div class="hrow"><label>退货金额</label><input class="inp" id="retTotal" type="number" step="0.01" value="' + orig.total + '" style="max-width:120px"></div>';
     h += '<div class="hrow"><label>退货原因</label><input class="inp" id="retReason" placeholder="可选" style="flex:1"></div>';
@@ -4908,7 +5338,7 @@ function editPurByIdx(pid, idx) {
     if (item.category && cats.indexOf(item.category) < 0) cats.unshift(item.category);
 
     var h = '<h3>编辑物品</h3>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="epi_date" type="date" style="max-width:160px" value="' + (p.date || td()) + '"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="epi_date" type="text" readonly placeholder="选择日期" style="max-width:160px;cursor:pointer" value="' + (p.date || td()) + '" onclick="_dpOpen(\'epi_date\')"></div>';
     
     h += '<div class="hrow"><label>品名</label><input class="inp" id="epi_name" style="flex:2" value="' + item.name.replace(/"/g, '&quot;') + '"></div>';
 
@@ -5003,7 +5433,7 @@ function rExpense() {
     // 录入页
     h += '<div id="expInput">';
     h += '<div class="section-label">录入费用</div>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="expDate" type="date" value="' + td() + '" style="max-width:150px">';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="expDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'expDate\')" style="max-width:150px;cursor:pointer">';
     h += '<label>分类</label><select class="inp" id="expCatSel" style="max-width:120px" onchange="toggleCustomInput(this,\'expCatC\')">';
     h += '<option value="">请选择</option>';
     cats.forEach(function(c) { h += '<option>' + c + '</option>'; });
@@ -5054,7 +5484,7 @@ function editExp(id) {
 
     var cats = getExpCats();
     var h = '<h3>编辑费用</h3>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="eeDate" type="date" value="' + e.date + '" style="max-width:150px">';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="eeDate" type="text" readonly placeholder="选择日期" value="' + e.date + '" onclick="_dpOpen(\'eeDate\')" style="max-width:150px;cursor:pointer">';
     h += '<label>分类</label><select class="inp" id="eeCat" style="max-width:120px">';
     cats.forEach(function(c) { h += '<option' + (e.category === c ? ' selected' : '') + '>' + c + '</option>'; });
     h += '</select></div>';
@@ -5531,7 +5961,7 @@ function renderInvHist(type) {
     var monthTotal = Object.values(dayTotals).reduce(function(s, v) { return s + v; }, 0);
 
     var h = '';
-    h += '<div class="hrow"><label>月份</label><input class="inp" id="invHistM" type="month" value="' + ym + '" style="max-width:180px" onchange="renderInvHist(\'' + type + '\')"></div>';
+    h += '<div class="hrow"><label>月份</label><input class="inp" id="invHistM" type="text" readonly placeholder="选择月份" value="' + ym + '" onclick="_mpOpen(\'invHistM\')" onchange="renderInvHist(\'' + type + '\')" style="max-width:180px;cursor:pointer"></div>';
 
     // 日历网格
     h += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:14px">';
@@ -5645,7 +6075,7 @@ function editInvSale(type, itemId, si) {
 
     var h = '<h3>编辑销售 · ' + item.name + '</h3>';
 
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="esi_date" type="date" value="' + s.date + '" style="max-width:160px"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="esi_date" type="text" readonly placeholder="选择日期" value="' + s.date + '" onclick="_dpOpen(\'esi_date\')" style="max-width:160px;cursor:pointer"></div>';
 
     if (type === 'tea') {
         h += '<div class="hrow"><label>杯数</label><input class="inp" id="esi_cups" type="number" value="' + (s.cups || 0) + '" style="max-width:80px">';
@@ -5808,7 +6238,7 @@ function buildRecords(item, type, ym) {
 
 // 渲染销售明细表格（用于详情弹窗中的销售标签）
 function renderSaleDetail(item, type, ym, unit) {
-    var h = '<div class="hrow"><label>月份</label><input class="inp" id="detM" type="month" value="' + ym + '" style="max-width:180px" onchange="detRefresh(\'' + type + '\',\'' + item.id + '\')"></div>';
+    var h = '<div class="hrow"><label>月份</label><input class="inp" id="detM" type="text" readonly placeholder="选择月份" value="' + ym + '" onclick="_mpOpen(\'detM\')" onchange="detRefresh(\'' + type + '\',\'' + item.id + '\')" style="max-width:180px;cursor:pointer"></div>';
 
     var sales = [];
     try { sales = (item.sales || []).filter(function(s) { return s.date && s.date.startsWith(ym); }); } catch (e) {}
@@ -5857,7 +6287,7 @@ function renderSaleDetail(item, type, ym, unit) {
 
 // 渲染出入库明细表格（入库/出库/销售混合）
 function renderBuyDetail(item, type, ym, unit) {
-    var h = '<div class="hrow"><label>月份</label><input class="inp" id="detBuyM" type="month" value="' + ym + '" style="max-width:180px" onchange="detBuyRefresh(\'' + type + '\',\'' + item.id + '\')"></div>';
+    var h = '<div class="hrow"><label>月份</label><input class="inp" id="detBuyM" type="text" readonly placeholder="选择月份" value="' + ym + '" onclick="_mpOpen(\'detBuyM\')" onchange="detBuyRefresh(\'' + type + '\',\'' + item.id + '\')" style="max-width:180px;cursor:pointer"></div>';
 
     var moves = [];
     try { moves = (item.purchases || []).filter(function(p) { return p.date && p.date.startsWith(ym); }); } catch (e) {}
@@ -5940,7 +6370,7 @@ function editInvRow(type, itemId, rowType, idx, unit) {
         var m = item.purchases[idx];
         if (!m) return;
         var h = '<h3>编辑出入库</h3>';
-        h += '<div class="hrow"><label>日期</label><input class="inp" id="eir_date" type="date" value="' + m.date + '" style="max-width:150px">';
+        h += '<div class="hrow"><label>日期</label><input class="inp" id="eir_date" type="text" readonly placeholder="选择日期" value="' + m.date + '" onclick="_dpOpen(\'eir_date\')" style="max-width:150px;cursor:pointer">';
         h += '<label>类型</label><select class="inp" id="eir_dir" style="max-width:80px">';
         h += '<option' + (m.qty >= 0 ? ' selected' : '') + '>入库</option>';
         h += '<option' + (m.qty < 0 ? ' selected' : '') + '>出库</option></select></div>';
@@ -5955,7 +6385,7 @@ function editInvRow(type, itemId, rowType, idx, unit) {
         var s = item.sales[idx];
         if (!s) return;
         var h = '<h3>编辑销售</h3>';
-        h += '<div class="hrow"><label>日期</label><input class="inp" id="eir_sdate" type="date" value="' + s.date + '" style="max-width:150px"></div>';
+        h += '<div class="hrow"><label>日期</label><input class="inp" id="eir_sdate" type="text" readonly placeholder="选择日期" value="' + s.date + '" onclick="_dpOpen(\'eir_sdate\')" style="max-width:150px;cursor:pointer"></div>';
 
         if (type === 'tea') {
             var exp = s.expectedAmount || ((s.cups || 0) * (item.pricePerCup || 0) + (s.pots || 0) * (item.pricePerPot || 0));
@@ -6134,7 +6564,7 @@ function invMoveAll(type, dir) {
     h += '<div class="hrow"><label>物品</label><select class="inp" id="mvItem" style="max-width:200px">';
     items.forEach(function(item) { h += '<option value="' + item.id + '">' + item.name + '</option>'; });
     h += '</select></div>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="mvDate" type="date" value="' + td() + '" style="max-width:150px"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="mvDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'mvDate\')" style="max-width:150px;cursor:pointer"></div>';
     h += '<div id="mvFields"></div>';
     h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn p" onclick="doInvMoveAll(\'' + type + '\',' + dir + ')">' + title + '</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button></div>';
@@ -6895,7 +7325,7 @@ function whMoveAll(dir) {
         h += '<option value="' + item.id + '">' + item.name + ' (库存:' + item.stock + item.unit + ')</option>';
     });
     h += '</select></div>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="whDate" type="date" value="' + td() + '" style="max-width:150px"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="whDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'whDate\')" style="max-width:150px;cursor:pointer"></div>';
     h += '<div class="hrow"><label>数量</label><input class="inp" id="whQty" type="number" style="max-width:100px"></div>';
     h += '<div class="hrow"><label>' + (dir > 0 ? '来源' : '原因') + '</label><input class="inp" id="whReason" style="max-width:150px"></div>';
     h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
@@ -6974,7 +7404,7 @@ function editWHMove(id, idx) {
     var m = item.movements[idx];
 
     var h = '<h3>编辑出入库 · ' + item.name + '</h3>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="ewm_date" type="date" value="' + m.date + '" style="max-width:150px"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="ewm_date" type="text" readonly placeholder="选择日期" value="' + m.date + '" onclick="_dpOpen(\'ewm_date\')" style="max-width:150px;cursor:pointer"></div>';
     h += '<div class="hrow"><label>类型</label><select class="inp" id="ewm_type" style="max-width:100px">';
     h += '<option value="1"' + (m.qty > 0 ? ' selected' : '') + '>入库</option>';
     h += '<option value="-1"' + (m.qty < 0 ? ' selected' : '') + '>出库</option>';
@@ -7066,7 +7496,7 @@ function rDamage() {
     var h = '<div class="section-label">录入报损</div>';
 
     // 日期、来源、物品
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="dmgDate" type="date" value="' + td() + '" style="max-width:150px">';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="dmgDate" type="text" readonly placeholder="选择日期" value="' + td() + '" onclick="_dpOpen(\'dmgDate\')" style="max-width:150px;cursor:pointer">';
     h += '<label>来源</label><select class="inp" id="dmgSource" style="max-width:100px" onchange="dmgSourceChange()">';
     h += '<option value="">选择</option><option>茗茶</option><option>香烟</option><option>酒类</option><option>仓库</option></select>';
     h += '<label>物品</label><select class="inp" id="dmgItem" style="max-width:140px" onchange="dmgItemChange()">';
@@ -7176,7 +7606,7 @@ function rReport() {
 
     // 月份选择器
     var h = '<div class="hrow"><label>月份</label>';
-    h += '<input class="inp" id="repM" type="month" value="' + ym + '" style="max-width:180px" onchange="rReport()">';
+    h += '<input class="inp" id="repM" type="text" readonly placeholder="选择月份" value="' + ym + '" onclick="_mpOpen(\'repM\')" onchange="rReport()" style="max-width:180px;cursor:pointer">';
     h += '</div>';
 
     var m = $id('repM') ? $id('repM').value || ym : ym;
@@ -7909,7 +8339,7 @@ function initRepCharts(id) {
 // ---------- 汇报主页面 ----------
 function rGen() {
     var h = '<div class="hrow"><label>月份</label>';
-    h += '<input class="inp" id="genM" type="month" value="' + curYM() + '" style="max-width:180px"></div>';
+    h += '<input class="inp" id="genM" type="text" readonly placeholder="选择月份" value="' + curYM() + '" onclick="_mpOpen(\'genM\')" style="max-width:180px;cursor:pointer"></div>';
 
     h += '<div class="sec">选择报告周期</div>';
     h += '<div class="cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">';
@@ -7929,8 +8359,8 @@ function rGen() {
 
     h += '<div class="sec">自定义周期</div>';
     h += '<div class="hrow">';
-    h += '<label>开始</label><input class="inp" id="genStart" type="date" style="max-width:150px">';
-    h += '<label>结束</label><input class="inp" id="genEnd" type="date" style="max-width:150px">';
+    h += '<label>开始</label><input class="inp" id="genStart" type="text" readonly placeholder="选择日期" onclick="_dpOpen(\'genStart\')" style="max-width:150px;cursor:pointer">';
+    h += '<label>结束</label><input class="inp" id="genEnd" type="text" readonly placeholder="选择日期" onclick="_dpOpen(\'genEnd\')" style="max-width:150px;cursor:pointer">';
     h += '<button class="btn p" onclick="doGen(\'custom\')">生成</button>';
     h += '</div>';
 
@@ -8272,7 +8702,7 @@ function rData() {
 
     // 字号 + 圆角 + 间距
     h += '<div class="hrow">';
-    h += '<label>字体</label>';
+    h += '<label>字号</label>';
     h += '<select class="inp" onchange="setFontSize(this.value)">';
     [{ v: '12', l: '小 12px' }, { v: '13', l: '标准 13px' }, { v: '14', l: '中 14px' }, { v: '15', l: '大 15px' }, { v: '17', l: '特大 17px' }, { v: '19', l: '超大 19px' }].forEach(function(s) {
         h += '<option value="' + s.v + '"' + ((localStorage.getItem('ax_fs') || '13') === s.v ? ' selected' : '') + '>' + s.l + '</option>';
@@ -9111,7 +9541,7 @@ function showAiDailyConfirm(data) {
 
     var h = '<h3>AI解析结果</h3>';
     h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="aid_date" type="date" value="' + date + '"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="aid_date" type="text" readonly placeholder="选择日期" value="' + date + '" onclick="_dpOpen(\'aid_date\')" style="cursor:pointer"></div>';
     h += '<div class="section-label">营收</div>';
     h += '<div class="hrow"><label>流水</label><input class="inp" id="aid_gross" type="number" value="' + (r.grossSales || 0) + '"><label>实收</label><input class="inp" id="aid_net" type="number" value="' + (r.netSales || 0) + '"></div>';
     h += '<div class="hrow"><label>厨房</label><input class="inp" id="aid_kitchen" type="number" value="' + (r.kitchenSales || 0) + '"><label>吧台</label><input class="inp" id="aid_bar" type="number" value="' + (r.barSales || 0) + '"></div>';
