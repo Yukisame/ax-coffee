@@ -7,92 +7,1183 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Crimson+Pro:wght@400;600&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&family=DM+Serif+Display&family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500&family=Lora:wght@400;600&family=LXGW+WenKai&family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:wght@700&family=Source+Serif+4:wght@400;600&family=Syne:wght@600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-    --bg:#f7f4ee;
-    --card:#fff;
-    --card-h:#faf8f3;
-    --bd:#e5dfd4;
-    --bd-l:#ece8df;
-    --ac:#b08d57;
-    --ac-h:#c9a86c;
-    --tx:#2c2c2c;
-    --tx-s:#666;
-    --tx-m:#aaa;
-    --gn:#3d8b5e;
-    --gn-b:rgba(61,139,94,.06);
-    --rd:#c75450;
-    --rd-b:rgba(199,84,80,.06);
-    --og:#d4a017;
-    --og-b:rgba(212,160,23,.07);
-    --r:8px;
-    --sh:0 1px 4px rgba(0,0,0,.04);
-    --sh2:0 4px 16px rgba(0,0,0,.06);
-    --fd:'Playfair Display',serif;
-    --fb:'Noto Serif SC',Georgia,serif;
-    --fm:'Lexend','DM Mono',monospace;
-    --sp:12px;
-    --sp-l:16px}
-html{font-size:13.5px}body{background:var(--bg);color:var(--tx);font-family:var(--fb);min-height:100vh}
-.top-bar{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:100}.top-inner{max-width:1060px;margin:0 auto;padding:0 20px}.top-header{display:flex;justify-content:space-between;align-items:center;padding:14px 0 0}.top-header h1{font-family:var(--fd);font-size:1.4rem;font-weight:700;color:var(--ac)}.top-right{display:flex;align-items:center;gap:12px;font-family:var(--fm);font-size:.7rem;color:var(--tx-m)}
-#syncInd{display:flex;align-items:center;gap:4px;cursor:pointer;padding:3px 8px;border-radius:12px}.sync-dot{width:6px;height:6px;border-radius:50%}
-.search-toggle{cursor:pointer;padding:6px;border-radius:6px;transition:background .2s}.search-toggle:hover{background:var(--card-h)}
-.top-nav{display:flex;gap:0;overflow-x:auto;scrollbar-width:none}.top-nav::-webkit-scrollbar{display:none}.nav-btn{background:none;border:none;font-family:var(--fb);font-size:.8rem;color:var(--tx-m);padding:10px 14px;cursor:pointer;white-space:nowrap;position:relative}.nav-btn:hover{color:var(--tx)}.nav-btn.active{color:var(--ac);font-weight:600}.nav-btn.active::after{content:'';position:absolute;bottom:0;left:8px;right:8px;height:2px;background:var(--ac)}.nav-sep{width:1px;background:var(--bd-l);margin:8px 4px;flex-shrink:0}
-.search-bar{background:var(--card);border-bottom:1px solid var(--bd);padding:10px 0;display:none;animation:slideDown .2s ease}.search-bar.show{display:block}@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}.search-inner{max-width:1060px;margin:0 auto;padding:0 20px;display:flex;gap:8px;align-items:center}.search-inner input{flex:1;background:var(--card-h);border:1px solid var(--bd);border-radius:6px;padding:9px 14px;font-family:var(--fb);font-size:.82rem;color:var(--tx);outline:none}.search-inner input:focus{border-color:var(--ac)}.search-close{background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--tx-m);padding:4px 8px;border-radius:4px}.search-close:hover{color:var(--tx);background:var(--card-h)}
-.search-results{max-width:1060px;margin:0 auto;padding:0 20px 20px}
-.main{max-width:1060px;margin:0 auto;padding:22px 20px 60px}.page-title{font-size:1.1rem;font-weight:700;margin-bottom:18px}.page.active{display:block}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px}.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:13px;box-shadow:var(--sh)}.card-l{font-size:.65rem;color:var(--tx-m);margin-bottom:4px;letter-spacing:.05em}.card-v{font-family:var(--fm);font-size:1.1rem;font-weight:500;text-align:left}.card-v.gn{color:var(--gn)}.card-v.rd{color:var(--rd)}.card-v.ac{color:var(--ac)}.card-v.og{color:var(--og)}
-.sec{font-size:.7rem;color:var(--tx-m);letter-spacing:.08em;text-transform:uppercase;margin:22px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--bd-l)}
-.tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);background:var(--card);margin-bottom:14px}table{width:100%;border-collapse:collapse}th{background:var(--card-h);font-size:.66rem;color:var(--tx-s);text-align:left;padding:9px 10px;border-bottom:1px solid var(--bd);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}td{padding:8px 10px;border-bottom:1px solid var(--bd-l);font-size:.78rem;white-space:nowrap}tr:last-child td{border-bottom:none}tr:hover td{background:var(--card-h)}.nr{text-align:left;font-family:var(--fm)}
-/* =============== 输入 =============== */
-.inp{
-    padding:8px 12px;
-    font-size:.82rem;
-    border:1px solid var(--bd-l);
-    border-radius:8px;
-    background:var(--card);
-    color:var(--tx);
-    outline:none;
-    font-family:var(--fm);
-    transition:border-color .2s,box-shadow .2s,background .2s;
-    line-height:1.4;
+ <style>
+/* ================================================================
+                岸香咖啡经营管理系统 · 全局样式
+   ================================================================ */
+
+/* ==================== 初始化 ==================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ==================== CSS 变量 ==================== */
+:root {
+    /* ---- 基础色彩 ---- */
+    --bg:       #f7f4ee;        /* 页面大背景 */
+    --card:     #fff;           /* 卡片/面板背景 */
+    --card-h:   #faf8f3;        /* 卡片hover/表头背景 */
+    --bd:       #e5dfd4;        /* 主边框 */
+    --bd-l:     #ece8df;        /* 浅边框/分割线 */
+    --ac:       #b08d57;        /* 主强调色（按钮/标题） */
+    --ac-h:     #c9a86c;        /* 强调色hover */
+    --tx:       #2c2c2c;        /* 主文字色 */
+    --tx-s:     #666;           /* 次文字色 */
+    --tx-m:     #aaa;           /* 弱文字/占位符 */
+    --gn:       #3d8b5e;        /* 正向色（利润/成功） */
+    --gn-b:     rgba(61,139,94,.06);   /* 正向色背景 */
+    --rd:       #c75450;        /* 负向色（亏损/删除） */
+    --rd-b:     rgba(199,84,80,.06);   /* 负向色背景 */
+    --og:       #d4a017;        /* 警告色 */
+    --og-b:     rgba(212,160,23,.07);  /* 警告色背景 */
+
+    /* ---- 圆角/阴影 ---- */
+    --r:        8px;
+    --sh:       0 1px 4px rgba(0,0,0,.04);
+    --sh2:      0 4px 16px rgba(0,0,0,.06);
+
+    /* ---- 字体 ---- */
+    --fd:       'Playfair Display', serif;        /* 装饰字体 */
+    --fb:       'Noto Serif SC', Georgia, serif;  /* 正文/按钮字体 */
+    --fm:       'Lexend', 'DM Mono', monospace;   /* 数字/等宽字体 */
+
+    /* ---- 间距 ---- */
+    --sp:       12px;
+    --sp-l:     16px;
+
+    /* ---- 导航栏兼容变量（映射到上方基础变量）---- */
+    --bg-primary:       var(--bg);
+    --bg-secondary:     var(--card);
+    --bg-tertiary:      var(--card-h);
+    --border:           var(--bd);
+    --border-light:     var(--bd-l);
+    --accent:           var(--ac);
+    --accent-hover:     var(--ac-h);
+    --accent-text:      #fff;
+    --accent-secondary: var(--ac-h);
+    --text-primary:     var(--tx);
+    --text-secondary:   var(--tx-s);
+    --text-muted:       var(--tx-m);
+    --accent-green:     var(--gn);
+    --accent-red:       var(--rd);
+    --accent-amber:     var(--og);
+    --shadow:           var(--sh);
+    --overlay:          rgba(44,44,44,.5);
+    --modal-bg:         var(--card);
+    --modal-border:     var(--bd);
 }
-.inp:focus{
-    border-color:var(--ac);
-    box-shadow:0 0 0 2px rgba(212,168,83,0.15);
-    background:var(--card-h);
+
+/* ==================== 页面基础 ==================== */
+html { font-size: 13.5px; }
+
+body {
+    background: var(--bg);
+    color: var(--tx);
+    font-family: var(--fb);
+    min-height: 100vh;
 }
-.inp::placeholder{color:var(--tx-s);font-family:var(--fb);font-style:italic}
-textarea.inp{
-    width:100%;
-    resize:vertical;
-    font-family:var(--fb);
-    min-height:80px;
-    line-height:1.6;
+
+/* 原来没有 .hrow 的定义，新增 */
+.hrow {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
-select.inp{cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%23888' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
-select.inp:hover{border-color:var(--tx-m)}
-select.inp option{background:var(--card);color:var(--tx)}
-.brow{display:flex;gap:7px;flex-wrap:wrap}.btn{padding:7px 16px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-family:var(--fb);font-size:.78rem;cursor:pointer;white-space:nowrap}.btn:hover{background:var(--card-h)}.btn.p{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:600}.btn.p:hover{background:var(--ac-h)}.btn.s{padding:4px 10px;font-size:.7rem}.btn.d{color:var(--rd);border-color:var(--rd-b)}.btn.d:hover{background:var(--rd-b)}.btn.g{background:var(--gn);color:#fff;border-color:var(--gn);font-weight:600}
-.badge{display:inline-block;font-size:.6rem;padding:2px 8px;border-radius:12px;font-weight:600}.badge.gn{background:var(--gn-b);color:var(--gn)}.badge.rd{background:var(--rd-b);color:var(--rd)}.badge.og{background:var(--og-b);color:var(--og)}
-.pv-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:var(--sh)}.pv-card h4{font-size:.82rem;color:var(--ac);margin-bottom:10px}.pv-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bd-l);font-size:.8rem}.pv-row:last-child{border-bottom:none}.pv-row .k{color:var(--tx-s)}
-.ed-input{background:var(--card-h);border:1px solid transparent;border-radius:4px;font-family:var(--fm);font-size:.8rem;padding:3px 6px;width:80px;text-align:left;color:var(--tx)}.ed-input:focus{border-color:var(--ac);outline:none;background:#fff}
-.chart-area{display:flex;align-items:flex-end;gap:6px;height:120px;padding:8px 0}.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}.chart-bar{width:100%;max-width:32px;border-radius:3px 3px 0 0;transition:height .5s ease;min-height:2px}.chart-bar.c1{background:var(--ac);opacity:.85}.chart-lbl{font-family:var(--fm);font-size:.56rem;color:var(--tx-m);text-align:center;line-height:1.2}
-.item-card{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:6px;font-size:.8rem;box-shadow:var(--sh);gap:8px;flex-wrap:wrap}.item-card .name{font-weight:600;min-width:100px}.item-card .nums{font-family:var(--fm);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-.tab-bar{display:flex;gap:0;margin-bottom:14px;border-bottom:1px solid var(--bd)}.tab-btn{background:none;border:none;font-family:var(--fb);font-size:.78rem;color:var(--tx-m);padding:8px 14px;cursor:pointer;position:relative}.tab-btn:hover{color:var(--tx)}.tab-btn.active{color:var(--ac);font-weight:600}.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:8px;right:8px;height:2px;background:var(--ac)}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500}.overlay.show{display:block}.modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:22px;width:92%;max-width:560px;max-height:80vh;overflow-y:auto;z-index:501;box-shadow:var(--sh2)}.modal.show{display:block}.modal h3{font-size:.92rem;margin-bottom:14px;color:var(--ac)}
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--ac);color:#fff;padding:9px 22px;border-radius:7px;font-weight:600;font-size:.8rem;opacity:0;transition:all .3s cubic-bezier(.16,1,.3,1);z-index:9999;pointer-events:none;white-space:nowrap;max-width:90vw}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.alert-bar{background:var(--og-b);border:1px solid rgba(212,160,23,.15);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:.78rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.tea-sale-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd-l);font-size:.78rem;flex-wrap:wrap}.tea-sale-row label{min-width:70px;font-weight:600}
-.free-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
-.section-label{font-size:.78rem;color:var(--ac);font-weight:600;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px dashed var(--bd-l)}
-.pur-folder{margin-bottom:8px}.pur-hdr{background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}.pur-hdr:hover{background:var(--bd-l)}.pur-hdr .ico{font-size:.6rem;color:var(--tx-m);width:12px}.pur-hdr .total{font-family:var(--fm);margin-left:auto;font-size:.82rem;font-weight:600;color:var(--ac)}.pur-body{border:1px solid var(--bd);border-top:none;border-radius:0 0 var(--r) var(--r);overflow:hidden}.pur-tbl{width:100%;border-collapse:collapse}.pur-tbl th{background:var(--card-h);font-size:.66rem;color:var(--tx-s);text-align:left;padding:7px 10px;border-bottom:1px solid var(--bd);font-weight:600}.pur-tbl td{padding:6px 10px;border-bottom:1px solid var(--bd-l);font-size:.78rem}.pur-tbl tr:last-child td{border-bottom:none}.pur-tbl tr:hover td{background:var(--card-h)}
-.totals-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.pm-edit{background:var(--sf);border:1px solid var(--bd);border-radius:4px;font-size:.74rem;padding:4px 6px;width:100%;min-width:50px}.pm-edit:focus{border-color:var(--ac);outline:none}
-.tag-btns{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;align-items:center}.tag-btn{padding:3px 10px;border-radius:12px;border:1px solid var(--bd);background:var(--card-h);color:var(--tx-s);font-family:var(--fb);font-size:.72rem;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.tag-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--card)}
-@keyframes aiSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@media(max-width:500px) {
+.hrow label {
+    font-size: .78rem;
+    color: var(--tx-s);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 36px;
+}
+
+/* ==================== 顶部导航栏（品牌/同步/日期） ==================== */
+#syncInd {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+.sync-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.search-toggle {
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: background .2s;
+}
+.search-toggle:hover { background: var(--card-h); }
+
+/* ==================== 搜索栏（展开/收起） ==================== */
+.search-bar {
+    background: var(--card);
+    border-bottom: 1px solid var(--bd);
+    padding: 10px 0;
+    display: none;
+    animation: slideDown .2s ease;
+}
+.search-bar.show { display: block; }
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.search-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.search-inner input {
+    flex: 1;
+    background: var(--card-h);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-family: var(--fb);
+    font-size: .82rem;
+    color: var(--tx);
+    outline: none;
+}
+.search-inner input:focus { border-color: var(--ac); }
+
+.search-close {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: var(--tx-m);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.search-close:hover { color: var(--tx); background: var(--card-h); }
+
+.search-results {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 20px 20px;
+}
+
+/* ==================== 主内容容器 ==================== */
+.main {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 22px 20px 60px;
+}
+.page-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+.page.active { display: block; }
+
+/* ==================== 统计卡片 ==================== */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.card {
+    background: var(--card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    padding: 13px;
+    box-shadow: var(--sh);
+}
+.card-l {
+    font-size: .65rem;
+    color: var(--tx-m);
+    margin-bottom: 4px;
+    letter-spacing: .05em;
+}
+.card-v {
+    font-family: var(--fm);
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-align: left;
+}
+.card-v.gn { color: var(--gn); }
+.card-v.rd { color: var(--rd); }
+.card-v.ac { color: var(--ac); }
+.card-v.og { color: var(--og); }
+
+/* ==================== 区域标题 ==================== */
+.sec {
+    font-size: .7rem;
+    color: var(--tx-m);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: 22px 0 12px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--bd-l);
+}
+
+/* ==================== 表格 ==================== */
+.tw {
+    overflow-x: auto;
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    background: var(--card);
+    margin-bottom: 14px;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+    background: var(--card-h);
+    font-size: .66rem;
+    color: var(--tx-s);
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--bd);
+    font-weight: 600;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--bd-l);
+    font-size: .78rem;
+    white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--card-h); }
+.nr {
+    text-align: left;
+    font-family: var(--fm);
+}
+
+/* ==================== 输入框 ==================== */
+.inp {
+    padding: 8px 12px;
+    font-size: .82rem;
+    border: 1px solid var(--bd-l);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--tx);
+    outline: none;
+    font-family: var(--fm);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    line-height: 1.4;
+}
+.inp:focus {
+    border-color: var(--ac);
+    box-shadow: 0 0 0 2px rgba(212,168,83,.15);
+    background: var(--card-h);
+}
+.inp::placeholder {
+    color: var(--tx-s);
+    font-family: var(--fb);
+    font-style: italic;
+}
+
+/* ---- 多行文本框 ---- */
+textarea.inp {
+    width: 100%;
+    resize: vertical;
+    font-family: var(--fb);
+    min-height: 80px;
+    line-height: 1.6;
+}
+
+/* ---- 下拉选择框 ---- */
+select.inp {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%23888' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+select.inp:hover { border-color: var(--tx-m); }
+select.inp option {
+    background: var(--card);
+    color: var(--tx);
+}
+
+/* ==================== 按钮 ==================== */
+.brow {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+.btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+    background: var(--card);
+    color: var(--tx);
+    font-family: var(--fb);
+    font-size: .78rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn:hover { background: var(--card-h); }
+
+/* 主按钮（强调色） */
+.btn.p {
+    background: var(--ac);
+    color: #fff;
+    border-color: var(--ac);
+    font-weight: 600;
+}
+.btn.p:hover { background: var(--ac-h); }
+
+/* 小按钮 */
+.btn.s {
+    padding: 4px 10px;
+    font-size: .7rem;
+}
+
+/* 危险按钮（红色描边） */
+.btn.d {
+    color: var(--rd);
+    border-color: var(--rd);
+    background: rgba(199,84,80,.06);
+}
+.btn.d:hover { background: rgba(199,84,80,.12); }
+
+/* 成功按钮（绿色） */
+.btn.g {
+    background: var(--gn);
+    color: #fff;
+    border-color: var(--gn);
+    font-weight: 600;
+}
+
+/* 警告按钮（橙色） */
+.btn.og { color: var(--og); border-color: var(--og); background: var(--og-b); }
+.btn.og:hover { background: rgba(212,160,23,.12); }
+
+
+/* ==================== 标签徽章 ==================== */
+.badge {
+    display: inline-block;
+    font-size: .6rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+.badge.gn { background: var(--gn-b); color: var(--gn); }
+.badge.rd { background: var(--rd-b); color: var(--rd); }
+.badge.og { background: var(--og-b); color: var(--og); }
+
+/* ==================== 预览卡片 ==================== */
+.pv-card {
+    background: var(--card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--sh);
+}
+.pv-card h4 {
+    font-size: .82rem;
+    color: var(--ac);
+    margin-bottom: 10px;
+}
+.pv-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--bd-l);
+    font-size: .8rem;
+}
+.pv-row:last-child { border-bottom: none; }
+.pv-row .k { color: var(--tx-s); }
+
+/* ==================== 内联编辑输入 ==================== */
+.ed-input {
+    background: var(--card-h);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-family: var(--fm);
+    font-size: .8rem;
+    padding: 3px 6px;
+    width: 80px;
+    text-align: left;
+    color: var(--tx);
+}
+.ed-input:focus {
+    border-color: var(--ac);
+    outline: none;
+    background: #fff;
+}
+
+/* ==================== 柱状图区域 ==================== */
+.chart-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 120px;
+    padding: 8px 0;
+}
+.chart-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+.chart-bar {
+    width: 100%;
+    max-width: 32px;
+    border-radius: 3px 3px 0 0;
+    transition: height .5s ease;
+    min-height: 2px;
+}
+.chart-bar.c1 { background: var(--ac); opacity: .85; }
+.chart-lbl {
+    font-family: var(--fm);
+    font-size: .56rem;
+    color: var(--tx-m);
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* ==================== 物品卡片 ==================== */
+.item-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    margin-bottom: 6px;
+    font-size: .8rem;
+    box-shadow: var(--sh);
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.item-card .name {
+    font-weight: 600;
+    min-width: 100px;
+}
+.item-card .nums {
+    font-family: var(--fm);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ==================== 标签栏（页面内子标签） ==================== */
+.tab-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--bd);
+}
+.tab-btn {
+    background: none;
+    border: none;
+    font-family: var(--fb);
+    font-size: .78rem;
+    color: var(--tx-m);
+    padding: 8px 14px;
+    cursor: pointer;
+    position: relative;
+}
+.tab-btn:hover { color: var(--tx); }
+.tab-btn.active {
+    color: var(--ac);
+    font-weight: 600;
+}
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    background: var(--ac);
+}
+
+/* ==================== 弹窗 ==================== */
+.overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 500;
+}
+.overlay.show { display: block; }
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--card);
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    padding: 22px;
+    width: 92%;
+    max-width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 501;
+    box-shadow: var(--sh2);
+    cursor: default;
+}
+.modal.show { display: block; }
+.modal h3 {
+    font-size: .92rem;
+    margin-bottom: 14px;
+    color: var(--ac);
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 500;
+    cursor: pointer;
+}
+/* ==================== 提示条 ==================== */
+.toast {
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--ac);
+    color: #fff;
+    padding: 9px 22px;
+    border-radius: 7px;
+    font-weight: 600;
+    font-size: .8rem;
+    opacity: 0;
+    transition: all .3s cubic-bezier(.16,1,.3,1);
+    z-index: 9999;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: 90vw;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ==================== 警告条 ==================== */
+.alert-bar {
+    background: var(--og-b);
+    border: 1px solid rgba(212,160,23,.15);
+    border-radius: var(--r);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: .78rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ==================== 日报/采购/费用 行样式 ==================== */
+.tea-sale-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--bd-l);
+    font-size: .78rem;
+    flex-wrap: wrap;
+}
+.tea-sale-row label {
+    min-width: 70px;
+    font-weight: 600;
+}
+
+.free-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    align-items: center;
+}
+
+.section-label {
+    font-size: .78rem;
+    color: var(--ac);
+    font-weight: 600;
+    margin: 16px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--bd-l);
+}
+
+/* ==================== 采购明细折叠 ==================== */
+.pur-folder { margin-bottom: 8px; }
+
+.pur-hdr {
+    background: var(--card-h);
+    border: 1px solid var(--bd);
+    border-radius: var(--r);
+    padding: 10px 14px;
+    font-size: .8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+.pur-hdr:hover { background: var(--bd-l); }
+.pur-hdr .ico {
+    font-size: .6rem;
+    color: var(--tx-m);
+    width: 12px;
+}
+.pur-hdr .total {
+    font-family: var(--fm);
+    margin-left: auto;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ac);
+}
+
+.pur-body {
+    border: 1px solid var(--bd);
+    border-top: none;
+    border-radius: 0 0 var(--r) var(--r);
+    overflow: hidden;
+}
+.pur-tbl { width: 100%; border-collapse: collapse; }
+.pur-tbl th {
+    background: var(--card-h);
+    font-size: .66rem;
+    color: var(--tx-s);
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--bd);
+    font-weight: 600;
+}
+.pur-tbl td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--bd-l);
+    font-size: .78rem;
+}
+.pur-tbl tr:last-child td { border-bottom: none; }
+.pur-tbl tr:hover td { background: var(--card-h); }
+
+/* ==================== 合计栏 ==================== */
+.totals-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+/* ==================== 采购手动录入编辑框 ==================== */
+.pm-edit {
+    background: var(--sf);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    font-size: .74rem;
+    padding: 4px 6px;
+    width: 100%;
+    min-width: 50px;
+}
+.pm-edit:focus {
+    border-color: var(--ac);
+    outline: none;
+}
+
+/* ==================== 标签切换按钮组 ==================== */
+.tag-btns {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    align-items: center;
+}
+.tag-btn {
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--bd);
+    background: var(--card-h);
+    color: var(--tx-s);
+    font-family: var(--fb);
+    font-size: .72rem;
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+.tag-btn:hover {
+    border-color: var(--ac);
+    color: var(--ac);
+    background: var(--card);
+}
+
+/* ==================== 动画 ==================== */
+/* AI 转圈加载动画 */
+@keyframes aiSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* ==================== 侧边工具栏（桌面端） ==================== */
+.toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 60px;
+    height: 100vh;
+    background: rgba(255,255,255,.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    z-index: 200;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+}
+
+/* ---- Logo 文字 ---- */
+.tl-main {
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+}
+.tl-sub {
+    font-size: .4rem;
+    font-weight: 600;
+    letter-spacing: .15em;
+    opacity: .8;
+    margin-top: 1px;
+}
+
+/* ---- 分割线 ---- */
+.toolbar-divider {
+    width: 28px;
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0 10px;
+    flex-shrink: 0;
+}
+
+/* ---- 按钮分组 ---- */
+.toolbar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 12px;
+    width: 100%;
+    padding: 0 6px;
+}
+
+/* ---- 工具栏按钮 ---- */
+.toolbar-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all .15s;
+    position: relative;
+    flex-shrink: 0;
+}
+.toolbar-btn .ticon {
+    font-size: 1.05rem;
+    line-height: 1;
+    transition: transform .15s;
+}
+.toolbar-btn .tlabel {
+    font-size: .48rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    opacity: .7;
+    transition: opacity .15s;
+}
+.toolbar-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+.toolbar-btn:hover .ticon { transform: scale(1.1); }
+.toolbar-btn:hover .tlabel { opacity: 1; }
+
+/* ---- 活跃状态（左侧蓝色指示条） ---- */
+.toolbar-btn.active {
+    background: rgba(26,115,232,.08);
+    color: var(--accent);
+}
+.toolbar-btn.active::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+}
+
+/* ---- 红点提醒 ---- */
+.toolbar-btn .badge-dot {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    background: var(--accent-red);
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+}
+
+/* ---- 底部区域（设置/头像） ---- */
+.toolbar-bottom {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+    width: 100%;
+}
+
+/* ---- 用户头像 ---- */
+.toolbar-user {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: box-shadow .2s;
+    margin-top: 8px;
+}
+.toolbar-user:hover {
+    box-shadow: 0 0 0 3px rgba(26,115,232,.15);
+}
+
+/* ==================== 遮罩层（侧边栏展开时的背景） ==================== */
+.toolbar-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    z-index: 299;
+}
+
+/* ==================== 汉堡按钮（仅移动端显示） ==================== */
+.hamburger {
+    display: none;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background .15s;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+.hamburger:hover { background: var(--bg-tertiary); }
+
+/* ==================== 悬浮毛玻璃导航栏 ==================== */
+.floating-nav {
+    position: fixed;
+    top: 12px;
+    left: 80px;
+    right: 16px;
+    height: 48px;
+    background: rgba(255,255,255,.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(210,227,252,.5);
+    border-radius: 14px;
+    box-shadow:
+        0 4px 24px rgba(26,115,232,.06),
+        0 1px 2px rgba(0,0,0,.04);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    z-index: 180;
+    transition: all .3s cubic-bezier(.16,1,.3,1);
+}
+/* 滚动时导航栏背景变实 */
+.floating-nav.scrolled {
+    background: rgba(255,255,255,.85);
+    box-shadow:
+        0 8px 32px rgba(26,115,232,.1),
+        0 1px 2px rgba(0,0,0,.06);
+}
+
+/* ---- 标题 ---- */
+.fnav-title {
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: auto;
+    white-space: nowrap;
+}
+.fnav-title .page-icon { font-size: 1rem; }
+
+/* ---- 子标签 ---- */
+.fnav-tabs {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.fnav-tabs::-webkit-scrollbar { display: none; }
+
+.fnav-tab {
+    padding: 6px 14px;
+    font-size: .78rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+}
+.fnav-tab:hover { background: rgba(26,115,232,.04); color: var(--text-primary); }
+.fnav-tab.active {
+    background: rgba(26,115,232,.08);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ---- 右侧工具区（搜索/同步/日期） ---- */
+.fnav-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* ---- 搜索框 ---- */
+.search-wrap { position: relative; }
+.search-wrap::before {
+    content: '⌕';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: .9rem;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+.fnav-search {
+    width: 160px;
+    padding: 6px 12px 6px 28px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(241,245,254,.6);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .78rem;
+    outline: none;
+    transition: all .2s;
+}
+.fnav-search:focus {
+    width: 220px;
+    border-color: var(--border);
+    background: var(--bg-secondary);
+    box-shadow: 0 0 0 3px rgba(26,115,232,.06);
+}
+.fnav-search::placeholder { color: var(--text-muted); }
+
+/* ---- 图标按钮 ---- */
+.fnav-icon-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+}
+.fnav-icon-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.sync-label {
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ==================== 主内容区（替换旧 .main） ==================== */
+.main-content {
+    margin-left: 60px;
+    padding: 76px 20px 24px 20px;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+}
+
+/* ==================== 中等屏幕（≤960px） ==================== */
+@media (max-width: 960px) {
+  .fnav-search { width: 120px; }
+  .fnav-search:focus { width: 160px; }
+  #headerDate { display: none; }
+  .fnav-tab { padding: 6px 10px; font-size: .72rem; }
+}
+
+/* ==================== 较小屏幕（≤840px） ==================== */
+@media (max-width: 840px) {
+  .fnav-tabs { display: none; }
+  .fnav-search { width: 100px; }
+  .fnav-search:focus { width: 140px; }
+}
+
+/* ==================== 移动端适配（≤768px） ==================== */
+@media (max-width: 768px) {
+
+    /* ---- 显示汉堡按钮 ---- */
+    .hamburger { display: flex; }
+
+    /* ---- 侧边栏变为侧滑抽屉 ---- */
+    .toolbar {
+        top: 0;
+        left: 0;
+        width: 140px;
+        height: 100vh;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px 12px;
+        border-right: 1px solid var(--border);
+        border-top: none;
+        background: #f5f5f5;
+        transform: translateX(-100%);
+        transition: transform .3s cubic-bezier(.16,1,.3,1);
+        z-index: 300;
+        overflow-y: auto;
+    }
+    .toolbar.open { transform: translateX(0); }
+
+    /* ---- 显示遮罩 ---- */
+    .toolbar-mask.open { display: block; }
+
+    /* ---- Logo 可点击 ---- */
+    .toolbar-logo {
+        padding: 12px 14px;
+        cursor: pointer;
+        border-radius: 10px;
+        transition: background .15s;
+    }
+    .toolbar-logo:hover { background: var(--bg-tertiary); }
+
+    /* ---- 隐藏分割线（圆框已分组） ---- */
+    .toolbar-divider { display: none; }
+
+    /* ---- 分组改为圆角方框 ---- */
+    .toolbar-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 10px;
+        padding: 8px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        width: 100%;
+    }
+
+    /* ---- 按钮改为横向宽条 ---- */
+    .toolbar-btn {
+        width: 100%;
+        height: 36px;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 0 10px;
+        border-radius: 8px;
+    }
+    .toolbar-btn .ticon {
+        font-size: .9rem;
+        width: 18px;
+        text-align: center;
+    }
+    .toolbar-btn .tlabel {
+        font-size: .72rem;
+        opacity: 1;
+    }
+
+    /* ---- 活跃指示条：改为左侧 ---- */
+    .toolbar-btn.active::before {
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 20px;
+    }
+
+    /* ---- 底部区域（圆框） ---- */
+    .toolbar-bottom {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        padding: 8px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        width: 100%;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* ---- 悬浮导航栏：缩小左右间距 ---- */
+    .floating-nav {
+        left: 8px;
+        right: 8px;
+        top: 8px;
+    }
+
+    /* ---- 主内容区：去掉侧边栏留白 ---- */
+    .main-content {
+        margin-left: 0;
+        padding: 68px 12px 24px;
+    }
+
+    /* ---- 表单行自适应 ---- */
     .hrow {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -113,41 +1204,78 @@ select.inp option{background:var(--card);color:var(--tx)}
         max-width: none !important;
         width: auto !important;
     }
-    .hrow .btn {
-        flex-shrink: 0 !important;
-    }
-    .hrow .btn.s {
-        flex-shrink: 0 !important;
-    }}
-.btn.d{color:var(--rd);border-color:var(--rd);background:rgba(199,84,80,0.06)}
-.btn.d:hover{background:rgba(199,84,80,0.12)}
-
+    .hrow .btn { flex-shrink: 0 !important; }
+    .search-wrap { display: none; }
+  #syncLabel { display: none !important; }    
+}
 </style>
+
 </head>
 <body>
-<header class="top-bar">
-  <div class="top-inner">
-    <div class="top-header" style="display:flex;justify-content:space-between;align-items:center">
-      <h1 style="margin:0">岸香咖啡</h1>
-      <div class="top-right" style="display:flex;align-items:center;gap:12px;font-size:.85rem">
-        <span class="search-toggle" onclick="toggleSearch()" style="cursor:pointer" title="搜索">🔍</span>
-        <span id="syncInd" onclick="goPage('data')" style="display:flex;align-items:center;gap:5px;cursor:pointer" title="数据同步">
-          <span class="sync-dot" id="syncDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;transition:background .3s"></span>
-          <span id="syncLabel">本地</span>
-        </span>
-        <span id="headerDate" style="color:var(--tx-m)"></span>
-      </div>
-    </div>
-    <nav class="top-nav" id="topNav"></nav>
+
+<!-- 遮罩层 -->
+<div class="toolbar-mask" id="toolbarMask" onclick="toggleToolbar()"></div>
+
+<!-- 侧边工具栏 -->
+<div class="toolbar" id="toolbar">
+  <div class="toolbar-logo" title="岸香咖啡弘皓大厦店" onclick="toggleToolbar()" style="padding:8px 0;margin-bottom:24px;flex-shrink:0;">
+   <div style="font-size:.82rem;font-weight:700;color:var(--accent);letter-spacing:.04em;line-height:1.3;text-align:center">岸香</div>
+   <div style="font-size:.5rem;font-weight:500;color:var(--text-muted);letter-spacing:.1em;margin-top:2px;text-align:center">COFFEE</div>
   </div>
-</header>
+
+  <div class="toolbar-group" id="toolbarMain"></div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group" id="toolbarInv"></div>
+  <div class="toolbar-divider"></div>
+  <div class="toolbar-group" id="toolbarReport"></div>
+
+  <div class="toolbar-bottom">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-page="settings" onclick="goPage('settings')" title="设置">
+        <span class="ticon">⚙️</span><span class="tlabel">设置</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 悬浮毛玻璃导航栏 ==================== -->
+<div class="floating-nav" id="fnav">
+  <!-- 汉堡按钮（只在移动端显示） -->
+  <button class="hamburger" id="hamburger" onclick="toggleToolbar()">☰</button>
+
+  <div class="fnav-title" id="fnavTitle">
+    <span class="page-icon">☕</span>
+    <span id="fnavLabel">岸香咖啡 · 经营管理</span>
+  </div>
+
+  <div class="fnav-tabs" id="fnavTabs"></div>
+
+<div class="fnav-right">
+  <div class="search-wrap">
+    <input type="text" class="fnav-search" placeholder="搜索...">
+  </div>
+  <span id="syncInd" onclick="goPage('settings')" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background .15s" onmouseenter="this.style.background='var(--bg-tertiary)'" onmouseleave="this.style.background='transparent'" title="数据同步">
+    <span class="sync-dot" id="syncDot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9AA0A6;transition:background .3s"></span>
+    <span id="syncLabel" class="sync-label">本地</span>
+  </span>
+  <span id="headerDate" style="font-size:.72rem;color:var(--text-muted);white-space:nowrap"></span>
+</div>
+</div>
+
+<!-- ==================== 主内容区 ==================== -->
+<div class="main-content" id="mainContent">
+  <!-- setMain() 写入这里 -->
+</div>
+
 <div class="search-bar" id="searchBar"><div class="search-inner"></div></div>
 <div class="search-results" id="searchResults"></div>
 <main class="main" id="main"></main>
 <div class="overlay" id="overlay" onclick="closeModal()"></div>
 <div class="modal" id="modal"></div>
 <div class="toast" id="toast"></div>
+
 <script>
+// 当前页面标识
 var _curPage='dash';
 
 
@@ -354,16 +1482,38 @@ function toast(m) {
 }
 
 // 弹窗
-function showModal(html, width) {
-    var el = document.getElementById('modal');
-    var w = width || 420;
-    el.innerHTML = '<div class="modal-content" style="max-width:' + w + 'px;width:92vw">' + html + '</div>';
-    el.style.display = 'flex';
+function showModal(content, width) {
+    var m = $id('modal');
+    var o = $id('overlay');
+    m.innerHTML = content;
+    m.style.maxWidth = (width || 560) + 'px';
+    m.classList.add('show');
+    o.classList.add('show');
+    m.style.position = 'fixed';
+    m.style.overflowY = 'auto';
+
+    // ★ 点击遮罩层关闭弹窗
+    o.onclick = function(e) {
+        if (e.target === o) {
+            closeModal();
+        }
+    };
+
+    // 阻止弹窗内容区的点击冒泡
+    m.onclick = function(e) {
+        e.stopPropagation();
+    };
 }
 
 // 关闭弹窗
 function closeModal() {
-    document.getElementById('modal').style.display = 'none';
+    var m = $id('modal');
+    var o = $id('overlay');
+    if (m) m.classList.remove('show');
+    if (o) {
+        o.classList.remove('show');
+        o.onclick = null;
+    }
 }
 
 // 获取某月全部日报
@@ -677,45 +1827,128 @@ var curPage = 'dash';
 
 // ---------- 渲染导航栏 ----------
 // 根据 NAV 配置生成导航按钮，高亮当前页
-function renderNav() {
-    var h = '';
-    NAV.forEach(function(n) {
-        if (n.sep) {
-            h += '<div class="nav-sep"></div>';
-            return;
-        }
-        h += '<button class="nav-btn' + (n.id === curPage ? ' active' : '') + '" onclick="goPage(\'' + n.id + '\')">' + n.icon + ' ' + n.label + '</button>';
+// ------ 页面路由 ------
+
+function goPage(name) {
+    document.querySelectorAll('.toolbar-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.page === name);
     });
-    $id('topNav').innerHTML = h;
-    $id('headerDate').textContent = td();  // 更新顶部日期
-    updSyncInd();                          // 更新同步状态
+
+    // 移动端自动收起侧边栏
+    var toolbar = $id('toolbar');
+    if (toolbar && toolbar.classList.contains('open')) {
+        toolbar.classList.remove('open');
+        $id('toolbarMask').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    var icons = {
+        dash: '📊', daily: '📝', purchase: '🛒', expense: '💰',
+        damage: '📦', tea: '🍵', cig: '🚬', alc: '🍺', wh: '🏪',
+        report: '📈', gen: '📤', ai: '🤖', settings: '⚙️'
+    };
+
+    switch (name) {
+        case 'dash':      rDash(); break;
+        case 'daily':     rDaily(); break;
+        case 'purchase':  rPurchase(); break;
+        case 'expense':   rExpense(); break;
+        case 'damage':    rDamage(); break;
+        case 'tea':       rInv('tea'); break;
+        case 'cig':       rInv('cig'); break;
+        case 'alc':       rInv('alc'); break;
+        case 'wh':        rWH(); break;
+        case 'report':    rReport(); break;
+        case 'gen':       rGen(); break;
+        case 'ai':        rAI(); break;
+        case 'settings':  rData(); break;
+        default:          rDash(); break;
+    }
 }
 
-// ---------- 页面跳转 ----------
-// 切换页面：更新导航高亮 → 关闭搜索 → 渲染对应页面
-function goPage(p) {
-    curPage = p;
-    _curPage = p;
-    renderNav();
-    if (_searchOpen) toggleSearch();       // 跳转时关闭搜索栏
+// ------ 侧边栏生成 ------
 
-    // 页面映射表：页面ID → 渲染函数
-    var pageMap = {
-        'dash': rDash,           // 总览
-        'daily': rDaily,         // 日报
-        'purchase': rPurchase,   // 采购
-        'expense': rExpense,     // 费用
-        'tea': function() { rInv('tea'); },   // 茗茶库存
-        'cig': function() { rInv('cig'); },   // 香烟库存
-        'alc': function() { rInv('alc'); },   // 酒类库存
-        'wh': rWH,               // 仓库
-        'damage': rDamage,       // 报损
-        'report': rReport,       // 报表
-        'gen': rGen,             // 汇报
-        'data': rData,           // 设置
-        'ai': rAI                // AI助手
-    };
-    if (pageMap[p]) pageMap[p]();
+function renderNav() {
+    var mainPages = [
+        { id: 'dash',     icon: '📊', label: '总览' },
+        { id: 'daily',    icon: '📝', label: '日报' },
+        { id: 'purchase', icon: '🛒', label: '采购' },
+        { id: 'expense',  icon: '💰', label: '费用' },
+        { id: 'damage',   icon: '📦', label: '报损' }
+    ];
+    var invPages = [
+        { id: 'tea', icon: '🍵', label: '茗茶' },
+        { id: 'cig', icon: '🚬', label: '香烟' },
+        { id: 'alc', icon: '🍺', label: '酒类' },
+        { id: 'wh',  icon: '🏪', label: '仓库' }
+    ];
+    var reportPages = [
+        { id: 'report', icon: '📈', label: '报告' },
+        { id: 'gen',    icon: '📤', label: '汇报' },
+        { id: 'ai',     icon: '🤖', label: 'AI' }
+    ];
+    function renderGroup(pages, containerId) {
+        var el = $id(containerId);
+        if (!el) return;
+        el.innerHTML = pages.map(function(p) {
+            return '<button class="toolbar-btn" data-page="' + p.id + '" onclick="goPage(\'' + p.id + '\')" title="' + p.label + '">' +
+                '<span class="ticon">' + p.icon + '</span>' +
+                '<span class="tlabel">' + p.label + '</span>' +
+                '</button>';
+        }).join('');
+    }
+
+    renderGroup(mainPages, 'toolbarMain');
+    renderGroup(invPages, 'toolbarInv');
+    renderGroup(reportPages, 'toolbarReport');
+
+    var active = $id('toolbarMain').querySelector('.toolbar-btn');
+    if (active) active.classList.add('active');
+}
+
+// 切换高亮
+function switchNav(btn) {
+    document.querySelectorAll('.toolbar-btn').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    btn.classList.add('active');
+}
+
+// 更新悬浮导航栏的子标签
+function updateFnavTabs(page) {
+  var tabs = {
+    home:     ['概览', '日报', '采购'],
+    tea:      ['库存', '明细'],
+    cig:      ['库存', '明细'],
+    alc:      ['库存', '明细'],
+    report:   ['利润表', '营收', '成本', '毛利']
+  };
+
+  var tabList = tabs[page];
+  var el = $id('fnavTabs');
+  if (!tabList || !tabList.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = tabList.map(function(t, i) {
+    return '<button class="fnav-tab' + (i === 0 ? ' active' : '') + '" onclick="fnavTabClick(this,\'' + page + '\',' + i + ')">' + t + '</button>';
+  }).join('');
+}
+
+function fnavTabClick(btn, page, idx) {
+  $id('fnavTabs').querySelectorAll('.fnav-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+
+  // 如果页面内有子标签栏，同步切换
+  var tabBtns = $id('mainContent').querySelectorAll('.tab-bar .tab-btn, .tab-bar button');
+  if (tabBtns[idx]) tabBtns[idx].click();
+}
+
+// 切换侧边栏展开/收起
+function toggleToolbar() {
+    var toolbar = $id('toolbar');
+    var mask = $id('toolbarMask');
+    toolbar.classList.toggle('open');
+    mask.classList.toggle('open');
+    document.body.style.overflow = toolbar.classList.contains('open') ? 'hidden' : '';
 }
 
 // ---------- 刷新当前页面（同步后调用）----------
@@ -750,7 +1983,8 @@ function updateNav(p) {
 // ---------- 设置主内容区 ----------
 // 所有页面渲染时调用，设置标题和内容
 function setMain(t, c) {
-    $id('main').innerHTML = '<div class="page-title">' + t + '</div><div class="page active">' + c + '</div>';
+    $id('mainContent').innerHTML = '<div class="page-title">' + t + '</div><div class="page active">' + c + '</div>';
+    window.scrollTo(0, 0);
 }
 
 
@@ -1057,7 +2291,6 @@ function renderDHist() {
     var firstDay = new Date(year, month - 1, 1).getDay();
     firstDay = firstDay === 0 ? 6 : firstDay - 1;
 
-    // 本月日报按日期索引
     var reports = {};
     var mr = getMR(ym);
     mr.forEach(function(r) {
@@ -1067,8 +2300,27 @@ function renderDHist() {
     var todayParts = td().split('-');
     var isThisMonth = td().startsWith(ym);
 
-    // ---- 日历 ----
-    var h = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';
+    var h = '';
+
+    // ★ 第一：月汇总（在月份选择器正下方）
+    if (mr.length) {
+        var mNet = 0, mGuests = 0;
+        mr.forEach(function(r) {
+            mNet += r.revenue.netSales || 0;
+            mGuests += r.guest.count || 0;
+        });
+
+        h += '<div class="cards">';
+        h += '<div class="card"><div class="card-l">本月实收</div><div class="card-v ac">' + fmtC(mNet) + '</div></div>';
+        h += '<div class="card"><div class="card-l">已报天数</div><div class="card-v">' + mr.length + '</div></div>';
+        h += '<div class="card"><div class="card-l">总客流</div><div class="card-v">' + mGuests + '</div></div>';
+        h += '</div>';
+
+        h += '<div class="brow" style="margin-bottom:14px"><button class="btn" onclick="showDailyCheckMonth()">📋 校验本月日报</button></div>';
+    }
+
+    // ★ 第二：日历
+    h += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px">';
     var weekNames = ['一', '二', '三', '四', '五', '六', '日'];
     weekNames.forEach(function(w) {
         h += '<div style="text-align:center;font-size:.7rem;color:var(--tx-m);padding:4px 0">' + w + '</div>';
@@ -1100,21 +2352,6 @@ function renderDHist() {
         h += '</div>';
     }
     h += '</div>';
-
-    // ---- 月汇总 ----
-    if (mr.length) {
-        var mNet = 0, mGuests = 0;
-        mr.forEach(function(r) {
-            mNet += r.revenue.netSales || 0;
-            mGuests += r.guest.count || 0;
-        });
-
-        h += '<div class="cards">';
-        h += '<div class="card"><div class="card-l">本月实收</div><div class="card-v ac">' + fmtC(mNet) + '</div></div>';
-        h += '<div class="card"><div class="card-l">已报天数</div><div class="card-v">' + mr.length + '</div></div>';
-        h += '<div class="card"><div class="card-l">总客流</div><div class="card-v">' + mGuests + '</div></div>';
-        h += '</div>';
-    }
 
     el.innerHTML = h;
 }
@@ -1348,6 +2585,10 @@ function doSaveManual(date, mode) {
             else db.dailyReports.push(r);
         }
     });
+
+    // ★ 同步销售即出库
+    if (teaData.length) syncInvToDaily('tea', date);
+    if (cigData.length) syncInvToDaily('cig', date);
 
     closeModal();
     toast(mode === 'merge' ? '已合并保存' : '已覆盖保存');
@@ -1601,7 +2842,7 @@ function renderDP() {
     h += inpRow('500+包厢', r.guest.premiumRoomsToday, 'guest.premiumRoomsToday');
     h += '</div>';
 
-    h += '<div class="brow" style="margin-top:12px">';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end;gap:10px">';
     h += '<button class="btn p" onclick="saveDaily()">保存</button>';
     h += '<button class="btn" onclick="_pd=null;$id(\'dailyPreview\').innerHTML=\'\'">取消</button>';
     h += '</div>';
@@ -1708,11 +2949,103 @@ function saveDaily() {
 }
 
 // ------ 日报详情弹窗 ------
+// 日报弹窗（只读模式）
 function showDailyModal(date) {
     var r = DB.dailyReports.find(function(d) { return d.date === date; });
     if (!r) { toast('未找到日报'); return; }
 
     var h = '<h3>' + date + ' 日报</h3>';
+    h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
+
+    // 营收
+    h += '<div class="section-label">营收</div>';
+    h += '<div class="pv-row"><span class="k">流水</span><span>' + fmtC(r.revenue.grossSales || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">折扣</span><span>' + fmtC(r.revenue.discount || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">实收</span><span style="color:var(--ac);font-weight:600">' + fmtC(r.revenue.netSales || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">厨房</span><span>' + fmtC(r.revenue.kitchenSales || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">吧台</span><span>' + fmtC(r.revenue.barSales || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">香烟</span><span>' + fmtC(r.revenue.cigarette.total || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">其他</span><span>' + fmtC(r.revenue.other || 0) + '</span></div>';
+
+    // 支付
+    h += '<div class="section-label">支付</div>';
+    h += '<div class="pv-row"><span class="k">POS机</span><span>' + fmtC(r.payment.pos || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">建行生活</span><span>' + fmtC(r.payment.ccbLife || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">现金</span><span>' + fmtC(r.payment.cash || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">会员刷卡</span><span>' + fmtC(r.payment.memberCard || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">招待</span><span>' + fmtC(r.payment.treat || 0) + '</span></div>';
+
+    // 应收
+    h += '<div class="section-label">应收账款</div>';
+    h += '<div class="pv-row"><span class="k">美团团购</span><span>' + fmtC(r.payment.ar.meituan || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">抖音团购</span><span>' + fmtC(r.payment.ar.douyin || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">合计</span><span style="font-weight:600">' + fmtC(r.payment.ar.total || 0) + '</span></div>';
+
+    // 外卖
+    h += '<div class="section-label">外卖</div>';
+    h += '<div class="pv-row"><span class="k">美团外卖</span><span>' + fmtC(r.delivery.meituan || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">淘宝</span><span>' + fmtC(r.delivery.taobao || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">京东</span><span>' + fmtC(r.delivery.jd || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">合计</span><span style="font-weight:600">' + fmtC(r.delivery.total || 0) + '</span></div>';
+
+    // 客情
+    h += '<div class="section-label">客情</div>';
+    h += '<div class="pv-row"><span class="k">人数</span><span>' + (r.guest.count || 0) + '人</span></div>';
+    h += '<div class="pv-row"><span class="k">人均</span><span>' + fmtC(r.guest.avgSpend || 0) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">500+包厢</span><span>' + (r.guest.premiumRoomsToday || 0) + '</span></div>';
+
+    // 汇报人
+    if (r.reporter) {
+        h += '<div class="pv-row"><span class="k">汇报人</span><span>' + r.reporter + '</span></div>';
+    }
+
+    // 茗茶销售
+    if (r.teaSales && Object.keys(r.teaSales).length) {
+        h += '<div class="section-label">茗茶销售</div>';
+        h += '<div class="tw"><table><tr><th>茶品</th><th>杯</th><th>壶</th><th>金额</th></tr>';
+        Object.keys(r.teaSales).forEach(function(id) {
+            var s = r.teaSales[id];
+            var item = DB.teaItems.find(function(t) { return t.id === id; });
+            h += '<tr><td>' + (item ? item.name : id) + '</td>';
+            h += '<td class="nr">' + (s.cups || 0) + '</td>';
+            h += '<td class="nr">' + (s.pots || 0) + '</td>';
+            h += '<td class="nr">' + fmtC(s.amount || 0) + '</td></tr>';
+        });
+        h += '</table></div>';
+    }
+
+    // 香烟销售
+    if (r.cigSales && Object.keys(r.cigSales).length) {
+        h += '<div class="section-label">香烟销售</div>';
+        h += '<div class="tw"><table><tr><th>品牌</th><th>数量</th><th>金额</th></tr>';
+        Object.keys(r.cigSales).forEach(function(id) {
+            var s = r.cigSales[id];
+            var item = DB.cigItems.find(function(c) { return c.id === id; });
+            h += '<tr><td>' + (item ? item.name : id) + '</td>';
+            h += '<td class="nr">' + (s.qty || 0) + '</td>';
+            h += '<td class="nr">' + fmtC(s.amount || 0) + '</td></tr>';
+        });
+        h += '</table></div>';
+    }
+
+    h += '</div>';
+
+    // 按钮
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
+    h += '<button class="btn p" onclick="editDailyModal(' + sq(date) + ')">修改</button>';
+    h += '<button class="btn d" onclick="delDailyFromModal(' + sq(date) + ')">删除</button>';
+    h += '<button class="btn" onclick="showDailyCheck(' + sq(date) + ')">校验</button>';
+    h += '<button class="btn" onclick="closeModal()">关闭</button>';
+    h += '</div>';
+
+    showModal(h, 700);
+}
+// 日报弹窗（编辑模式）
+function editDailyModal(date) {
+    var r = DB.dailyReports.find(function(d) { return d.date === date; });
+    if (!r) { toast('未找到日报'); return; }
+
+    var h = '<h3>' + date + ' 日报 · 编辑</h3>';
     h += '<div style="max-height:60vh;overflow-y:auto;padding-right:4px">';
 
     // 营收
@@ -1755,7 +3088,7 @@ function showDailyModal(date) {
 
     // 茗茶销售（只读）
     if (r.teaSales && Object.keys(r.teaSales).length) {
-        h += '<div class="section-label">茗茶销售</div>';
+        h += '<div class="section-label">茗茶销售（只读）</div>';
         h += '<div class="tw"><table><tr><th>茶品</th><th>杯</th><th>壶</th><th>金额</th></tr>';
         Object.keys(r.teaSales).forEach(function(id) {
             var s = r.teaSales[id];
@@ -1770,7 +3103,7 @@ function showDailyModal(date) {
 
     // 香烟销售（只读）
     if (r.cigSales && Object.keys(r.cigSales).length) {
-        h += '<div class="section-label">香烟销售</div>';
+        h += '<div class="section-label">香烟销售（只读）</div>';
         h += '<div class="tw"><table><tr><th>品牌</th><th>数量</th><th>金额</th></tr>';
         Object.keys(r.cigSales).forEach(function(id) {
             var s = r.cigSales[id];
@@ -1782,13 +3115,13 @@ function showDailyModal(date) {
         h += '</table></div>';
     }
 
-    h += '</div>'; // 关闭滚动区
+    h += '</div>';
 
     // 按钮
-    h += '<div class="brow" style="margin-top:12px">';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<button class="btn p" onclick="saveDailyModal(' + sq(date) + ')">保存</button>';
-    h += '<button class="btn del-btn" onclick="delDailyFromModal(' + sq(date) + ')">删除</button>';
-    h += '<button class="btn" onclick="closeModal()">关闭</button>';
+    h += '<button class="btn d" onclick="delDailyFromModal(' + sq(date) + ')">删除</button>';
+    h += '<button class="btn" onclick="showDailyModal(' + sq(date) + ')">取消</button>';
     h += '</div>';
 
     showModal(h, 700);
@@ -1852,6 +3185,216 @@ function delDailyFromModal(date) {
     renderDHist();
 }
 
+// 库存销售编辑后，同步日报
+// 库存销售编辑/删除后，同步日报
+function syncInvToDaily(type, date) {
+    var items = DB[INV[type].key] || [];
+
+    // ★ 重建所有该类型商品当天的负数purchase
+    items.forEach(function(item) {
+        // 移除所有当天的负数purchase（不区分来源，避免重复）
+        item.purchases = (item.purchases || []).filter(function(p) {
+            return !(p.date === date && p.qty < 0);
+        });
+
+        // 从销售数据重新计算消耗
+        var sales = item.sales.filter(function(s) { return s.date === date; });
+        if (type === 'tea') {
+            var cups = 0, pots = 0, amount = 0, expected = 0;
+            sales.forEach(function(s) {
+                cups += (s.cups || 0);
+                pots += (s.pots || 0);
+                amount += (s.amount || 0);
+                expected += (s.expectedAmount || 0);
+            });
+            var gramUsed = cups * (item.gramsPerCup || 0) + pots * (item.gramsPerPot || 0);
+            if (gramUsed > 0) {
+                item.purchases.push({ date: date, qty: -gramUsed, source: '日报' });
+            }
+        } else {
+            var qty = 0, amount = 0;
+            sales.forEach(function(s) {
+                qty += (s.qty || 0);
+                amount += (s.amount || 0);
+            });
+            if (qty > 0) {
+                item.purchases.push({ date: date, qty: -qty, source: '日报' });
+            }
+        }
+    });
+
+    // ★ 同步日报数据（如果有日报的话）
+    var dr = DB.dailyReports.find(function(r) { return r.date === date; });
+    if (dr) {
+        if (type === 'tea') {
+            var newTeaSales = {};
+            DB.teaItems.forEach(function(item) {
+                var cups = 0, pots = 0, amount = 0, expected = 0;
+                item.sales.filter(function(s) { return s.date === date; }).forEach(function(s) {
+                    cups += (s.cups || 0);
+                    pots += (s.pots || 0);
+                    expected += (s.expectedAmount || 0);
+                    amount += (s.amount || 0);
+                });
+                if (cups > 0 || pots > 0 || amount > 0) {
+                    newTeaSales[item.id] = { cups: cups, pots: pots, expectedAmount: expected, amount: amount };
+                }
+            });
+            dr.teaSales = newTeaSales;
+        }
+
+        if (type === 'cig') {
+            var cigTotal = 0;
+            var newCigSales = {};
+            DB.cigItems.forEach(function(item) {
+                var qty = 0, amount = 0;
+                item.sales.filter(function(s) { return s.date === date; }).forEach(function(s) {
+                    qty += (s.qty || 0);
+                    amount += (s.amount || 0);
+                });
+                if (qty > 0 || amount > 0) {
+                    newCigSales[item.id] = { qty: qty, amount: amount };
+                }
+                cigTotal += amount;
+            });
+            dr.cigSales = newCigSales;
+            if (!dr.revenue.cigarette) dr.revenue.cigarette = { total: 0, items: {} };
+            dr.revenue.cigarette.total = cigTotal;
+        }
+
+        if (type === 'alc') {
+            var newAlcSales = {};
+            DB.alcItems.forEach(function(item) {
+                var qty = 0, amount = 0;
+                item.sales.filter(function(s) { return s.date === date; }).forEach(function(s) {
+                    qty += (s.qty || 0);
+                    amount += (s.amount || 0);
+                });
+                if (qty > 0 || amount > 0) {
+                    newAlcSales[item.id] = { qty: qty, amount: amount };
+                }
+            });
+            dr.alcSales = newAlcSales;
+        }
+    }
+
+    saveDB();
+}
+// ==================== 日报数据校验 ====================
+function checkDailyData(r) {
+    var issues = [];
+
+    // 1. 流水 - 折扣 = 实收
+    var expected = (r.revenue.grossSales || 0) - (r.revenue.discount || 0);
+    var actual = r.revenue.netSales || 0;
+    if (Math.abs(expected - actual) > 0.01) {
+        issues.push('流水-折扣≠实收：' + fmtC(expected) + ' ≠ ' + fmtC(actual) + '（差 ' + fmtC(expected - actual) + '）');
+    }
+
+    // 2. 支付渠道合计 = 实收
+    var payTotal = (r.payment.pos || 0) + (r.payment.ccbLife || 0) + (r.payment.cash || 0)
+        + (r.payment.memberCard || 0) + (r.payment.treat || 0) + (r.payment.ar.total || 0)
+        + (r.delivery.total || 0);
+    if (Math.abs(payTotal - actual) > 0.01) {
+        issues.push('支付渠道合计≠实收：' + fmtC(payTotal) + ' ≠ ' + fmtC(actual) + '（差 ' + fmtC(payTotal - actual) + '）');
+    }
+
+    // 3. 应收账款 = 美团团购 + 抖音团购
+    var arExpected = (r.payment.ar.meituan || 0) + (r.payment.ar.douyin || 0);
+    var arActual = r.payment.ar.total || 0;
+    if (Math.abs(arExpected - arActual) > 0.01) {
+        issues.push('应收账款≠美团+抖音：' + fmtC(arExpected) + ' ≠ ' + fmtC(arActual) + '（差 ' + fmtC(arExpected - arActual) + '）');
+    }
+
+    // 4. 外卖合计 = 美团外卖 + 淘宝 + 京东
+    var delExpected = (r.delivery.meituan || 0) + (r.delivery.taobao || 0) + (r.delivery.jd || 0);
+    var delActual = r.delivery.total || 0;
+    if (Math.abs(delExpected - delActual) > 0.01) {
+        issues.push('外卖合计≠美团+淘宝+京东：' + fmtC(delExpected) + ' ≠ ' + fmtC(delActual) + '（差 ' + fmtC(delExpected - delActual) + '）');
+    }
+
+    return issues;
+}
+
+// 校验结果弹窗
+function showDailyCheck(date) {
+    var dr = DB.dailyReports.find(function(r) { return r.date === date; });
+    if (!dr) { toast('找不到日报'); return; }
+
+    var issues = checkDailyData(dr);
+
+    var h = '<h3>' + date + ' 日报校验</h3>';
+
+    if (issues.length === 0) {
+        h += '<div style="text-align:center;padding:20px">';
+        h += '<div style="font-size:2rem;margin-bottom:8px">✅</div>';
+        h += '<div style="font-size:.88rem;font-weight:600;color:var(--gn)">全部校验通过</div>';
+        h += '</div>';
+    } else {
+        h += '<div style="margin-bottom:12px">';
+        h += '<div style="font-size:.78rem;color:var(--rd);font-weight:600;margin-bottom:8px">发现 ' + issues.length + ' 项异常：</div>';
+        issues.forEach(function(iss, i) {
+            h += '<div style="padding:8px 12px;background:var(--rd-b);border:1px solid rgba(199,84,80,.15);border-radius:6px;margin-bottom:6px;font-size:.78rem;color:var(--rd)">';
+            h += '<b>' + (i + 1) + '.</b> ' + iss;
+            h += '</div>';
+        });
+        h += '</div>';
+    }
+
+    // 显示原始数据参考
+    h += '<div style="margin-top:14px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:6px">';
+    h += '<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:6px;font-weight:600">数据参考</div>';
+    h += '<div style="font-size:.74rem;color:var(--tx-s);line-height:1.8">';
+    h += '流水 <b>' + fmtC(dr.revenue.grossSales || 0) + '</b> − 折扣 <b>' + fmtC(dr.revenue.discount || 0) + '</b> = 实收 <b>' + fmtC(dr.revenue.netSales || 0) + '</b><br>';
+    h += 'POS <b>' + fmtC(dr.payment.pos || 0) + '</b> + 建行 <b>' + fmtC(dr.payment.ccbLife || 0) + '</b> + 现金 <b>' + fmtC(dr.payment.cash || 0) + '</b><br>';
+    h += '+ 会员 <b>' + fmtC(dr.payment.memberCard || 0) + '</b> + 招待 <b>' + fmtC(dr.payment.treat || 0) + '</b><br>';
+    h += '+ 应收 <b>' + fmtC(dr.payment.ar.total || 0) + '</b>（美团 <b>' + fmtC(dr.payment.ar.meituan || 0) + '</b> + 抖音 <b>' + fmtC(dr.payment.ar.douyin || 0) + '</b>）<br>';
+    h += '+ 外卖 <b>' + fmtC(dr.delivery.total || 0) + '</b>（美团 <b>' + fmtC(dr.delivery.meituan || 0) + '</b> + 淘宝 <b>' + fmtC(dr.delivery.taobao || 0) + '</b> + 京东 <b>' + fmtC(dr.delivery.jd || 0) + '</b>）';
+    h += '</div></div>';
+
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    showModal(h, 560);
+}
+
+// 批量校验整月
+function showDailyCheckMonth() {
+    var ym = curYM();
+    var reports = DB.dailyReports.filter(function(r) { return r.date.startsWith(ym); });
+    if (!reports.length) { toast('本月暂无日报'); return; }
+
+    var totalIssues = 0;
+    var h = '<h3>' + ym + ' 日报批量校验</h3>';
+    h += '<div style="max-height:55vh;overflow-y:auto">';
+
+    reports.sort(function(a, b) { return a.date.localeCompare(b.date); }).forEach(function(r) {
+        var issues = checkDailyData(r);
+        var d = parseInt(r.date.split('-')[2]);
+        if (issues.length === 0) {
+            h += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.78rem">';
+            h += '<span style="color:var(--gn);font-weight:600">✓</span> ' + d + '日 · 正常';
+            h += '</div>';
+        } else {
+            totalIssues += issues.length;
+            h += '<div style="padding:8px 0;border-bottom:1px solid var(--bd-l)">';
+            h += '<div style="font-size:.78rem;font-weight:600;color:var(--rd)">⚠ ' + d + '日 · ' + issues.length + '项异常</div>';
+            issues.forEach(function(iss) {
+                h += '<div style="font-size:.7rem;color:var(--tx-m);padding:2px 0 2px 18px">' + iss + '</div>';
+            });
+            h += '</div>';
+        }
+    });
+
+    h += '</div>';
+
+    if (totalIssues === 0) {
+        h += '<div style="text-align:center;padding:12px;font-size:.82rem;color:var(--gn);font-weight:600">✅ 全部 ' + reports.length + ' 天校验通过</div>';
+    } else {
+        h += '<div style="text-align:center;padding:12px;font-size:.82rem;color:var(--rd);font-weight:600">共 ' + reports.length + ' 天，发现 ' + totalIssues + ' 项异常</div>';
+    }
+
+    h += '<div class="brow" style="margin-top:8px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    showModal(h, 560);
+}
 
 // ==================== 8. 采购 ====================
 // ---------- 全局变量 ----------
@@ -2471,7 +4014,7 @@ function manageCats() {
     h += '<input class="inp" id="newAreaCat" placeholder="输入新分类名称" style="flex:2">';
     h += '<button class="btn p" onclick="addAreaCat()">添加</button></div>';
     h += '<div id="macList"></div>';
-    h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 500);
     renderAreaCatsList();
 }
@@ -2724,66 +4267,6 @@ function doAIParseGo() {
     xhr.send(JSON.stringify(body));
 }
 
-// AI识别结果确认弹窗
-function showMimoConfirm() {
-    var r = window._mimoResult;
-    if (!r) return;
-    var srcTotal = r.items.reduce(function(s, item) { return s + item.total; }, 0);
-    var secs = ['厨房', '吧台', '外场'];
-    var cats = getPurCats();
-
-    var h = '<h3>AI识别结果</h3>';
-    h += '<div class="cards">';
-    h += '<div class="card"><div class="card-l">日期</div><div class="card-v">' + r.date + '</div></div>';
-    h += '<div class="card"><div class="card-l">物品</div><div class="card-v ac">' + r.items.length + '项</div></div>';
-    h += '<div class="card"><div class="card-l">合计</div><div class="card-v ac">' + fmtC(srcTotal) + '</div></div>';
-    h += '<div class="card"><div class="card-l">来源</div><div class="card-v">' + r.source + '</div></div>';
-    h += '</div>';
-
-    h += '<div class="hrow"><label>来源</label>';
-    h += '<select class="inp" id="pResSrc" style="max-width:120px">';
-    h += '<option' + (r.source === '岸香贸易' ? ' selected' : '') + '>岸香贸易</option>';
-    h += '<option' + (r.source === '外购' ? ' selected' : '') + '>外购</option></select></div>';
-
-    // 批量填充
-    h += '<div style="margin-bottom:10px;padding:10px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r)">';
-    h += '<div style="font-size:.7rem;color:var(--ac);margin-bottom:6px">批量填充:</div>';
-    h += '<div class="hrow"><label>区域</label>';
-    h += '<select class="inp" id="mimoBatchSec" style="max-width:110px"><option value="">不填充</option>';
-    secs.forEach(function(s) { h += '<option>' + s + '</option>'; });
-    h += '</select><button class="btn s" onclick="batchFill(\'section\',\'mimo\')">应用</button>';
-    h += '<label style="margin-left:10px">分类</label>';
-    h += '<select class="inp" id="mimoBatchCat" style="max-width:130px"><option value="">不填充</option>';
-    cats.forEach(function(c) { h += '<option>' + c + '</option>'; });
-    h += '</select><button class="btn s" onclick="batchFill(\'category\',\'mimo\')">应用</button></div></div>';
-
-    // 物品表格
-    h += '<div class="sec">物品列表</div>';
-    h += '<div id="parseTableWrap"><div class="tw"><table id="parseTbl">';
-    h += '<tr><th>品名</th><th>数量</th><th>单价</th><th>总价</th><th>区域</th><th>分类</th></tr>';
-    r.items.forEach(function(item, idx) {
-        h += '<tr><td>' + item.name + '</td>';
-        h += '<td class="nr">' + item.qty + (item.unit || '') + '</td>';
-        h += '<td class="nr">' + fmt(item.unitPrice) + '</td>';
-        h += '<td class="nr">' + fmtC(item.total) + '</td>';
-        h += '<td><select class="pm-edit" style="width:65px;font-size:70%" onchange="parseResFieldChange(' + idx + ',\'section\',this.value)">';
-        h += '<option value="">-</option>';
-        secs.forEach(function(s) { h += '<option' + (item.section === s ? ' selected' : '') + '>' + s + '</option>'; });
-        h += '<option value="__custom">自定义</option><option value="__clear">清除</option></select></td>';
-        h += '<td><select class="pm-edit" style="width:85px;font-size:70%" onchange="parseResFieldChange(' + idx + ',\'category\',this.value)">';
-        h += '<option value="">-</option>';
-        cats.forEach(function(c) { h += '<option' + (item.category === c ? ' selected' : '') + '>' + c + '</option>'; });
-        h += '<option value="__custom">自定义</option><option value="__clear">清除</option></select></td></tr>';
-    });
-    h += '</table></div></div>';
-
-    h += '<div class="brow" style="margin-top:14px">';
-    h += '<button class="btn p" onclick="doMimoConfirm()">确认并编辑</button>';
-    h += '<button class="btn" onclick="closeModal()">取消</button></div>';
-
-    showModal(h, 700);
-}
-
 // 确认AI识别结果并导入手动录入表单
 function doMimoConfirm() {
     var r = window._mimoResult;
@@ -2897,7 +4380,7 @@ function checkPurInvLink(purItems, date) {
         h += '</div></div>';
     });
 
-    h += '<div class="brow" style="margin-top:14px">';
+    h += '<div class="brow" style="margin-top:14px;justify-content:flex-end;gap:10px">';
     h += '<button class="btn p" onclick="doPurInvLink()">确认入库</button>';
     h += '<button class="btn" onclick="closeModal();rPurchase()">跳过</button></div>';
 
@@ -2971,11 +4454,18 @@ function togglePF(id) {
 
 // 弹窗编辑采购明细中的单个物品
 function editPurByDate(date, name) {
-    var p = DB.purchases.find(function(pp) { return pp.date === date; });
-    if (!p) return;
-    var found = null;
-    for (var k = 0; k < p.items.length; k++) {
-        if (p.items[k].name === name) { found = p.items[k]; break; }
+    var purchases = DB.purchases.filter(function(pp) { return pp.date === date; });
+    if (!purchases.length) return;
+    var found = null, foundP = null;
+    for (var i = 0; i < purchases.length; i++) {
+        for (var k = 0; k < purchases[i].items.length; k++) {
+            if (purchases[i].items[k].name === name) {
+                found = purchases[i].items[k];
+                foundP = purchases[i];
+                break;
+            }
+        }
+        if (found) break;
     }
     if (!found) return;
 
@@ -2983,7 +4473,7 @@ function editPurByDate(date, name) {
     var cats = getPurCats(found.section);
 
     var h = '<h3>编辑物品</h3>';
-    h += '<div class="hrow"><label>日期</label><input class="inp" id="epi_date" type="date" style="max-width:160px" value="' + p.date + '"></div>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="epi_date" type="date" style="max-width:160px" value="' + foundP.date + '"></div>';
     h += '<div class="hrow"><label>品名</label><input class="inp" id="epi_name" style="flex:2" value="' + found.name.replace(/"/g, '&quot;') + '"></div>';
     h += '<div class="hrow"><label>区域</label><select class="inp" id="epi_sec" style="max-width:110px" onchange="epiSecChanged(this)">';
     h += '<option value="">-</option>';
@@ -2998,9 +4488,9 @@ function editPurByDate(date, name) {
     h += '<label>单价</label><input class="inp" id="epi_up" type="number" step="0.01" style="max-width:90px" value="' + (found.unitPrice || 0) + '" oninput="epiCalcTotal()">';
     h += '<label>总价</label><input class="inp" id="epi_total" type="number" step="0.01" style="max-width:100px" value="' + found.total + '">';
     h += '</div>';
-    h += '<div class="brow" style="margin-top:14px">';
+    h += '<div class="brow" style="margin-top:14px;justify-content:flex-end">';
     h += '<button class="btn p" onclick="doEditPurItem(' + sq(date) + ',' + sq(name) + ')">保存</button>';
-    h += '<button class="btn" onclick="closeModal()">取消</button></div>';
+    h += '<button class="btn" onclick="closeModal();setTimeout(function(){showPurDayModal(\'' + date + '\')},100)">返回</button></div>';
     showModal(h, 550);
 }
 
@@ -3044,8 +4534,7 @@ function doEditPurItem(date, origName) {
     var showDate = (newDate && newDate !== date) ? newDate : date;
     closeModal();
     toast('已更新');
-    if ($id('purDayArea')) showPurDay(showDate);
-    else renderPHist();
+    setTimeout(function() { showPurDayModal(showDate); }, 100);
 }
 
 // ------ 采购明细日历 ------
@@ -3104,9 +4593,7 @@ function renderPHist() {
         h += '><div style="font-size:.7rem;font-weight:600;color:' + (isToday ? 'var(--ac)' : 'var(--tx)') + '">' + d + '</div>';
         if (has) {
             h += '<div style="font-family:var(--fm);font-size:.65rem;color:var(--ac);margin-top:2px">';
-            if (dayTotals[d] >= 10000) h += (dayTotals[d] / 10000).toFixed(1) + '万';
-            else if (dayTotals[d] >= 1000) h += (dayTotals[d] / 1000).toFixed(1) + 'k';
-            else h += '¥' + dayTotals[d].toFixed(0);
+            h += fmtC(dayTotals[d]);
             h += '</div>';
         }
         h += '</div>';
@@ -3143,7 +4630,7 @@ function showPurDayModal(date) {
     h += '<button class="btn s" style="font-size:.65rem;padding:2px 6px" onclick="editPurDate(\'' + date + '\')">改日期</button></div>';
     h += '<div style="display:flex;align-items:center;gap:8px">';
     h += '<span style="font-size:.95rem;font-weight:700;color:var(--ac)">¥' + fmtC(total) + '</span>';
-    h += '<button class="btn s del-btn" onclick="delPurDay(\'' + date + '\')">删除当日</button></div></div>';
+    h += '<button class="btn s d" onclick="delPurDay(\'' + date + '\')">删除当日</button></div></div>';
 
     // 按区域→分类分组
     var secGroups = {};
@@ -3173,7 +4660,7 @@ function showPurDayModal(date) {
         h += '<span style="font-size:.88rem;font-weight:700;color:var(--ac)">▸ ' + sec + '</span>';
         h += '<div style="display:flex;align-items:center;gap:6px">';
         h += '<span style="font-family:var(--fm);font-size:.88rem;font-weight:600">¥' + fmtC(secTotals[sec]) + '</span>';
-        h += '<button class="btn s del-btn" style="font-size:.65rem;padding:2px 6px" onclick="event.stopPropagation();delPurSec(\'' + date + '\',\'' + sec.replace(/'/g, "\\'") + '\')">删除区域</button>';
+        h += '<button class="btn s d" style="font-size:.65rem;padding:2px 6px" onclick="event.stopPropagation();delPurSec(\'' + date + '\',\'' + sec.replace(/'/g, "\\'") + '\')">删除区域</button>';
         h += '</div></div>';
 
         h += '<div id="' + secId + '">';
@@ -3190,7 +4677,7 @@ function showPurDayModal(date) {
             h += '<span style="font-size:.75rem;font-weight:600;color:var(--tx)">▸' + cat + '</span>';
             h += '<div style="display:flex;align-items:center;gap:4px">';
             h += '<span style="font-family:var(--fm);font-size:.75rem;color:var(--tx-m)">¥' + fmtC(group.total) + '</span>';
-            h += '<button class="btn s del-btn" style="font-size:.6rem;padding:1px 5px" onclick="event.stopPropagation();delPurCat(\'' + date + '\',\'' + sec.replace(/'/g, "\\'") + '\',\'' + cat.replace(/'/g, "\\'") + '\')">删除分类</button>';
+            h += '<button class="btn s d" style="font-size:.6rem;padding:1px 5px" onclick="event.stopPropagation();delPurCat(\'' + date + '\',\'' + sec.replace(/'/g, "\\'") + '\',\'' + cat.replace(/'/g, "\\'") + '\')">删除分类</button>';
             h += '</div></div>';
 
             h += '<div id="' + catId + '">';
@@ -3203,7 +4690,8 @@ function showPurDayModal(date) {
                 h += '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">';
                 h += '<span style="font-size:.82rem;font-weight:700;color:var(--ac)">¥' + fmtC(item.total) + '</span>';
                 h += '<button class="btn s" style="font-size:.65rem;padding:2px 6px" onclick="editPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">编</button>';
-                h += '<button class="btn s del-btn" style="font-size:.65rem;padding:2px 6px" onclick="delPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">删</button>';
+                h += '<button class="btn s d" style="font-size:.65rem;padding:2px 6px" onclick="delPurFromModal(\'' + date + '\',\'' + item.name.replace(/'/g, "\\'") + '\')">删</button>';
+                h += '<button class="btn s og" style="font-size:.65rem;padding:2px 6px" onclick="returnPurItem(\'' + date + '\',' + sq(item.name) + ')">退</button>';
                 h += '</div></div>';
             });
             h += '</div></div>';
@@ -3212,7 +4700,7 @@ function showPurDayModal(date) {
     });
 
     h += '</div>';
-    h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
 
     showModal(h, 600);
     var mc = document.querySelector('.modal-content');
@@ -3285,6 +4773,97 @@ function delPurFromModal(date, name) {
     var remain = DB.purchases.filter(function(p) { return p.date === date; });
     if (remain.length) showPurDayModal(date); else closeModal();
 }
+// 采购退货
+function returnPurItem(date, name) {
+    var p = DB.purchases.find(function(pp) { return pp.date === date; });
+    if (!p) return;
+
+    // 找到原物品
+    var orig = null;
+    for (var i = 0; i < p.items.length; i++) {
+        if (p.items[i].name === name && p.items[i].source !== '退货') {
+            orig = p.items[i];
+            break;
+        }
+    }
+    if (!orig) { toast('未找到原采购记录'); return; }
+
+    var h = '<h3>退货 · ' + name + '</h3>';
+    h += '<div class="pv-row"><span class="k">原采购</span><span>' + fmtC(orig.total) + '</span></div>';
+    h += '<div class="pv-row"><span class="k">数量</span><span>' + orig.qty + (orig.unit || '') + '</span></div>';
+    h += '<div class="pv-row"><span class="k">单价</span><span>' + fmtC(orig.unitPrice || 0) + '</span></div>';
+
+    h += '<div class="section-label">退货信息</div>';
+    h += '<div class="hrow"><label>退货日期</label><input class="inp" id="retDate" type="date" value="' + td() + '" style="max-width:150px"></div>';
+    h += '<div class="hrow"><label>退货数量</label><input class="inp" id="retQty" type="number" step="0.01" value="' + orig.qty + '" style="max-width:100px" oninput="calcReturnTotal()"></div>';
+    h += '<div class="hrow"><label>退货金额</label><input class="inp" id="retTotal" type="number" step="0.01" value="' + orig.total + '" style="max-width:120px"></div>';
+    h += '<div class="hrow"><label>退货原因</label><input class="inp" id="retReason" placeholder="可选" style="flex:1"></div>';
+
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
+    h += '<button class="btn p" onclick="doReturnPurItem(\'' + date + '\',' + sq(name) + ')">确认退货</button>';
+    h += '<button class="btn" onclick="closeModal();setTimeout(function(){showPurDayModal(\'' + date + '\')},100)">取消</button>';
+    h += '</div>';
+
+    showModal(h, 500);
+}
+
+// 退货时自动计算金额
+function calcReturnTotal() {
+    var qty = parseFloat($id('retQty').value) || 0;
+    // 从原始记录取单价
+    var total = qty * parseFloat($id('retTotal').value / parseFloat($id('retQty').value || 1));
+    // 不自动算了，让用户自己填
+}
+
+// 执行退货：在退货日期新增一条负数记录
+function doReturnPurItem(date, name) {
+    var retDate = $id('retDate').value || td();
+    var retQty = parseFloat($id('retQty').value) || 0;
+    var retTotal = parseFloat($id('retTotal').value) || 0;
+    var retReason = $id('retReason').value.trim();
+
+    if (retQty <= 0 && retTotal <= 0) { toast('请填写退货信息'); return; }
+
+    // 找到原物品信息
+    var p = DB.purchases.find(function(pp) { return pp.date === date; });
+    if (!p) return;
+    var orig = null;
+    for (var i = 0; i < p.items.length; i++) {
+        if (p.items[i].name === name && p.items[i].source !== '退货') {
+            orig = p.items[i];
+            break;
+        }
+    }
+    if (!orig) { toast('未找到原采购'); return; }
+
+    // 查找退货日期对应的采购记录，没有就新建
+    upd(function(db) {
+        var target = db.purchases.find(function(pp) { return pp.date === retDate; });
+        if (!target) {
+            target = { date: retDate, source: p.source, items: [] };
+            db.purchases.push(target);
+        }
+
+        // 添加退货记录（负数金额）
+        target.items.push({
+            name: name,
+            section: orig.section,
+            category: orig.category,
+            qty: -retQty,
+            unit: orig.unit || '',
+            unitPrice: orig.unitPrice || 0,
+            total: -retTotal,
+            source: '退货',
+            note: retReason
+        });
+    });
+
+    closeModal();
+    toast('已退货 ' + name + ' ¥' + fmtC(retTotal));
+
+    // 返回原弹窗
+    setTimeout(function() { showPurDayModal(date); }, 100);
+}
 
 // 从弹窗跳转到编辑
 function editPurFromModal(date, name) { closeModal(); editPurByDate(date, name); }
@@ -3351,7 +4930,7 @@ function editPurByIdx(pid, idx) {
     h += '<label>单价</label><input class="inp" id="epi_up" type="number" step="0.01" style="max-width:90px" value="' + (item.unitPrice || 0) + '" oninput="epiCalcTotal()">';
     h += '<label>总价</label><input class="inp" id="epi_total" type="number" step="0.01" style="max-width:100px" value="' + item.total + '"></div>';
 
-    h += '<div class="brow" style="margin-top:14px">';
+    h += '<div class="brow" style="margin-top:14px;justify-content:flex-end">';
     h += '<button class="btn p" onclick="doEditPurByIdx(' + sq(pid) + ',' + idx + ')">保存</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button></div>';
 
@@ -3481,7 +5060,7 @@ function editExp(id) {
     h += '</select></div>';
     h += '<div class="hrow"><label>金额</label><input class="inp" id="eeAmt" type="number" step="0.01" value="' + e.amount + '" style="max-width:100px">';
     h += '<label>备注</label><input class="inp" id="eeNote" value="' + (e.note || '') + '"></div>';
-    h += '<div class="brow" style="margin-top:12px"><button class="btn p" onclick="doEditExp()">保存</button>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end;gap:10px"><button class="btn p" onclick="doEditExp()">保存</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button></div>';
     showModal(h);
 }
@@ -3665,14 +5244,14 @@ function showExpDayModal(date,items){
         h+='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">';
         h+='<span style="font-size:.88rem;font-weight:700;color:var(--ac)">¥'+fmtC(e.amount)+'</span>';
         h+=' <button class="btn s" onclick="editExpFromCal(\''+e.id+'\',\''+date+'\')">编</button>';
-        h+=' <button class="btn s del-btn" onclick="delExpFromCal(\''+e.id+'\',\''+date+'\')">删</button>';
+        h+=' <button class="btn s d" onclick="delExpFromCal(\''+e.id+'\',\''+date+'\')">删</button>';
         h+='</div>';
 
         h+='</div>';
     });
     h+='</div>';
 
-    h+='<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h+='<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
 
     showModal(h,550);
 }
@@ -3729,7 +5308,19 @@ function rInv(type) {
             if (type === 'tea') expected += (s.cups || 0) * (item.pricePerCup || 0) + (s.pots || 0) * (item.pricePerPot || 0);
             else expected += (s.qty || 0) * (item.pricePerUnit || 0);
         });
-        stats.push({ item: item, stock: c.stock, cups: cups, pots: pots, qty: qty, expected: expected, actual: mc.actual, cost: mc.cost, profit: mc.actual - mc.cost });
+        var fifo = calcFIFOMonthlyCost(item, type, ym);
+        stats.push({
+            item: item,
+            stock: fifo.remainQty, 
+            cups: cups,
+            pots: pots,
+            qty: qty,
+            expected: expected,
+            actual: mc.actual,
+            cost: fifo.cost,
+            profit: mc.actual - fifo.cost,
+            fifo: fifo
+        });
     });
 
     // 汇总
@@ -3737,10 +5328,11 @@ function rInv(type) {
     var tA = stats.reduce(function(s, st) { return s + st.actual; }, 0);
     var tC = stats.reduce(function(s, st) { return s + st.cost; }, 0);
     var tP = tA - tC;
+    var tFifoValue = stats.reduce(function(s, st) { return s + st.fifo.remainValue; }, 0);
 
     var h = '';
 
-    // 顶部卡片
+    // ===== 顶部卡片 =====
     h += '<div class="cards">';
     h += '<div class="card"><div class="card-l">品类</div><div class="card-v ac">' + items.length + '</div></div>';
     h += '<div class="card"><div class="card-l">应收</div><div class="card-v">' + fmtC(tE) + '</div></div>';
@@ -3750,14 +5342,14 @@ function rInv(type) {
     h += '<div class="card"><div class="card-l">毛利率</div><div class="card-v">' + (tA > 0 ? fmtP(tP / tA * 100) : '0%') + '</div></div>';
     h += '</div>';
 
-    // 标签栏
+    // ===== 标签栏（明细优先） =====
     h += '<div class="tab-bar" id="invT">';
-    h += '<button class="tab-btn active" onclick="switchInvT(\'stock\',\'' + type + '\')">库存</button>';
-    h += '<button class="tab-btn" onclick="switchInvT(\'hist\',\'' + type + '\')">明细</button>';
+    h += '<button class="tab-btn active" data-tab="hist" onclick="switchInvT(\'hist\',\'' + type + '\')">明细</button>';
+    h += '<button class="tab-btn" data-tab="stock" onclick="switchInvT(\'stock\',\'' + type + '\')">库存</button>';
     h += '</div>';
 
-    // 库存表格
-    h += '<div id="invStock">';
+    // ===== 库存表格（默认隐藏） =====
+    h += '<div id="invStock" style="display:none">';
     h += '<div class="brow" style="margin-bottom:14px">';
     h += '<button class="btn" onclick="showAddInv(\'' + type + '\')">+添加</button> ';
     h += '<button class="btn" onclick="invMoveAll(\'' + type + '\',1)">入库</button> ';
@@ -3767,49 +5359,115 @@ function rInv(type) {
     if (items.length) {
         h += '<div class="tw"><table>';
 
+        // ---------- 茗茶 ----------
         if (type === 'tea') {
-            h += '<tr><th>品名</th><th>期初</th><th>单价/杯</th><th>销售(杯)</th><th>销售(壶)</th><th>应收</th><th>实收</th><th>毛利</th><th>操作</th></tr>';
+            h += '<tr><th>品名</th><th>库存</th><th>库存价值</th><th>本月实收</th><th>毛利</th><th>毛利率</th><th>操作</th></tr>';
+
             stats.forEach(function(st) {
+                var margin = st.actual > 0 ? fmtP(st.profit / st.actual * 100) : '0%';
+
+                // 主行
                 h += '<tr data-inv="' + type + '_' + st.item.id + '">';
-                h += '<td>' + st.item.name + '</td>';
+                h += '<td style="font-weight:600">' + st.item.name + '</td>';
                 h += '<td class="nr">' + st.stock + '克</td>';
-                h += '<td class="nr">' + fmt(st.item.pricePerCup || 0) + '</td>';
-                h += '<td class="nr">' + st.cups + '</td>';
-                h += '<td class="nr">' + st.pots + '</td>';
-                h += '<td class="nr">' + fmtC(st.expected) + '</td>';
-                h += '<td class="nr" style="color:var(--gn)">' + fmtC(st.actual) + '</td>';
-                h += '<td class="nr" style="color:' + (st.profit >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(st.profit) + '</td>';
+                h += '<td class="nr" style="color:var(--ac);font-weight:600">' + fmtC(st.fifo.remainValue) + '</td>';
+                h += '<td class="nr" style="color:var(--gn);font-weight:600">' + fmtC(st.actual) + '</td>';
+                h += '<td class="nr" style="color:' + (st.profit >= 0 ? 'var(--gn)' : 'var(--rd)') + ';font-weight:600">' + fmtC(st.profit) + '</td>';
+                h += '<td class="nr">' + margin + '</td>';
                 h += '<td><button class="btn s" data-act="edit">编</button> ';
                 h += '<button class="btn s" onclick="invDetail(\'' + type + '\',\'' + st.item.id + '\')">详</button> ';
                 h += '<button class="btn s d" data-act="del">×</button></td></tr>';
+
+                // 次行
+                h += '<tr>';
+                h += '<td colspan="7" style="padding:4px 10px 8px;border-bottom:1px solid var(--bd-l)">';
+                h += '<span style="font-size:.68rem;color:var(--tx-m)">';
+                h += '单杯 ¥' + fmt(st.item.pricePerCup || 0);
+                h += ' · 单壶 ¥' + fmt(st.item.pricePerPot || 0);
+                h += ' · 售 ' + st.cups + '杯+' + st.pots + '壶';
+                h += ' · 销售成本 ¥' + fmtC(st.cost);
+                h += '</span></td></tr>';
             });
-            h += '<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td></td><td></td>';
-            h += '<td class="nr" style="font-weight:600">' + stats.reduce(function(s, st) { return s + st.cups; }, 0) + '</td>';
-            h += '<td class="nr" style="font-weight:600">' + stats.reduce(function(s, st) { return s + st.pots; }, 0) + '</td>';
-            h += '<td class="nr" style="font-weight:600">' + fmtC(tE) + '</td>';
+
+            // 合计
+            h += '<tr style="background:var(--card-h)">';
+            h += '<td style="font-weight:600">合计</td><td></td>';
+            h += '<td class="nr" style="font-weight:600;color:var(--ac)">' + fmtC(tFifoValue) + '</td>';
             h += '<td class="nr" style="font-weight:600;color:var(--gn)">' + fmtC(tA) + '</td>';
             h += '<td class="nr" style="font-weight:600;color:' + (tP >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(tP) + '</td>';
+            h += '<td class="nr" style="font-weight:600">' + (tA > 0 ? fmtP(tP / tA * 100) : '0%') + '</td>';
             h += '<td></td></tr>';
-        } else {
-            h += '<tr><th>品名</th><th>期初</th><th>单价/' + unit + '</th><th>销售(' + unit + ')</th><th>应收</th><th>实收</th><th>毛利</th><th>操作</th></tr>';
+
+        // ---------- 香烟 ----------
+        } else if (type === 'cig') {
+            h += '<tr><th>品名</th><th>库存</th><th>库存价值</th><th>本月实收</th><th>毛利</th><th>毛利率</th><th>操作</th></tr>';
+
             stats.forEach(function(st) {
+                var margin = st.actual > 0 ? fmtP(st.profit / st.actual * 100) : '0%';
+
                 h += '<tr data-inv="' + type + '_' + st.item.id + '">';
-                h += '<td>' + st.item.name + '</td>';
-                h += '<td class="nr">' + st.stock + unit + '</td>';
-                h += '<td class="nr">' + fmt(st.item.pricePerUnit || 0) + '</td>';
-                h += '<td class="nr">' + st.qty + '</td>';
-                h += '<td class="nr">' + fmtC(st.expected) + '</td>';
-                h += '<td class="nr" style="color:var(--gn)">' + fmtC(st.actual) + '</td>';
-                h += '<td class="nr" style="color:' + (st.profit >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(st.profit) + '</td>';
+                h += '<td style="font-weight:600">' + st.item.name + '</td>';
+                h += '<td class="nr">' + st.stock + '包</td>';
+                h += '<td class="nr" style="color:var(--ac);font-weight:600">' + fmtC(st.fifo.remainValue) + '</td>';
+                h += '<td class="nr" style="color:var(--gn);font-weight:600">' + fmtC(st.actual) + '</td>';
+                h += '<td class="nr" style="color:' + (st.profit >= 0 ? 'var(--gn)' : 'var(--rd)') + ';font-weight:600">' + fmtC(st.profit) + '</td>';
+                h += '<td class="nr">' + margin + '</td>';
                 h += '<td><button class="btn s" data-act="edit">编</button> ';
                 h += '<button class="btn s" onclick="invDetail(\'' + type + '\',\'' + st.item.id + '\')">详</button> ';
                 h += '<button class="btn s d" data-act="del">×</button></td></tr>';
+
+                h += '<tr>';
+                h += '<td colspan="7" style="padding:4px 10px 8px;border-bottom:1px solid var(--bd-l)">';
+                h += '<span style="font-size:.68rem;color:var(--tx-m)">';
+                h += '单价 ¥' + fmt(st.item.pricePerUnit || 0) + '/包';
+                h += ' · 售 ' + st.qty + '包';
+                h += ' · 销售成本 ¥' + fmtC(st.cost);
+                h += '</span></td></tr>';
             });
-            h += '<tr style="background:var(--card-h)"><td style="font-weight:600">合计</td><td></td><td></td>';
-            h += '<td class="nr" style="font-weight:600">' + stats.reduce(function(s, st) { return s + st.qty; }, 0) + unit + '</td>';
-            h += '<td class="nr" style="font-weight:600">' + fmtC(tE) + '</td>';
+
+            // 合计
+            h += '<tr style="background:var(--card-h)">';
+            h += '<td style="font-weight:600">合计</td><td></td>';
+            h += '<td class="nr" style="font-weight:600;color:var(--ac)">' + fmtC(tFifoValue) + '</td>';
             h += '<td class="nr" style="font-weight:600;color:var(--gn)">' + fmtC(tA) + '</td>';
             h += '<td class="nr" style="font-weight:600;color:' + (tP >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(tP) + '</td>';
+            h += '<td class="nr" style="font-weight:600">' + (tA > 0 ? fmtP(tP / tA * 100) : '0%') + '</td>';
+            h += '<td></td></tr>';
+
+        // ---------- 酒类 ----------
+        } else {
+            h += '<tr><th>品名</th><th>库存</th><th>库存价值</th><th>本月实收</th><th>毛利</th><th>毛利率</th><th>操作</th></tr>';
+
+            stats.forEach(function(st) {
+                var margin = st.actual > 0 ? fmtP(st.profit / st.actual * 100) : '0%';
+
+                h += '<tr data-inv="' + type + '_' + st.item.id + '">';
+                h += '<td style="font-weight:600">' + st.item.name + '</td>';
+                h += '<td class="nr">' + st.stock + '瓶</td>';
+                h += '<td class="nr" style="color:var(--ac);font-weight:600">' + fmtC(st.fifo.remainValue) + '</td>';
+                h += '<td class="nr" style="color:var(--gn);font-weight:600">' + fmtC(st.actual) + '</td>';
+                h += '<td class="nr" style="color:' + (st.profit >= 0 ? 'var(--gn)' : 'var(--rd)') + ';font-weight:600">' + fmtC(st.profit) + '</td>';
+                h += '<td class="nr">' + margin + '</td>';
+                h += '<td><button class="btn s" data-act="edit">编</button> ';
+                h += '<button class="btn s" onclick="invDetail(\'' + type + '\',\'' + st.item.id + '\')">详</button> ';
+                h += '<button class="btn s d" data-act="del">×</button></td></tr>';
+
+                h += '<tr>';
+                h += '<td colspan="7" style="padding:4px 10px 8px;border-bottom:1px solid var(--bd-l)">';
+                h += '<span style="font-size:.68rem;color:var(--tx-m)">';
+                h += '单价 ¥' + fmt(st.item.pricePerUnit || 0) + '/瓶';
+                h += ' · 售 ' + st.qty + '瓶';
+                h += ' · 销售成本 ¥' + fmtC(st.cost);
+                h += '</span></td></tr>';
+            });
+
+            // 合计
+            h += '<tr style="background:var(--card-h)">';
+            h += '<td style="font-weight:600">合计</td><td></td>';
+            h += '<td class="nr" style="font-weight:600;color:var(--ac)">' + fmtC(tFifoValue) + '</td>';
+            h += '<td class="nr" style="font-weight:600;color:var(--gn)">' + fmtC(tA) + '</td>';
+            h += '<td class="nr" style="font-weight:600;color:' + (tP >= 0 ? 'var(--gn)' : 'var(--rd)') + '">' + fmtC(tP) + '</td>';
+            h += '<td class="nr" style="font-weight:600">' + (tA > 0 ? fmtP(tP / tA * 100) : '0%') + '</td>';
             h += '<td></td></tr>';
         }
 
@@ -3818,14 +5476,20 @@ function rInv(type) {
         h += '<div style="text-align:center;padding:30px;color:var(--tx-m)">暂无</div>';
     }
 
-    h += '</div><div id="invHist" style="display:none"></div>';
+    h += '</div>';
+
+    // ===== 明细区（默认显示） =====
+    h += '<div id="invHist"></div>';
+
     setMain(INV[type].label + '管理', h);
+    setTimeout(function() { switchInvT('hist', type); }, 100);
 }
+
 
 // 切换库存标签页（库存/明细）
 function switchInvT(tab, type) {
-    document.querySelectorAll('#invT .tab-btn').forEach(function(b, i) {
-        b.classList.toggle('active', i === (tab === 'stock' ? 0 : 1));
+    document.querySelectorAll('#invT .tab-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.tab === tab);
     });
     $id('invStock').style.display = tab === 'stock' ? '' : 'none';
     $id('invHist').style.display = tab === 'hist' ? '' : 'none';
@@ -3905,11 +5569,11 @@ function renderInvHist(type) {
 // 日销售详情弹窗
 function showInvDayModal(type, date) {
     var items = DB[INV[type].key] || [];
-    var unit = type === 'cig' ? '包' : type === 'alc' ? '瓶' : '';
+    var unit = type === 'cig' ? '包' : type === 'alc' ? '瓶' : '克';
     var records = [];
     items.forEach(function(item) {
-        item.sales.forEach(function(s) {
-            if (s.date === date) records.push({ item: item, sale: s });
+        item.sales.forEach(function(s, si) {
+            if (s.date === date) records.push({ item: item, sale: s, si: si });
         });
     });
     if (!records.length) { toast('这天没有销售记录'); return; }
@@ -3924,6 +5588,8 @@ function showInvDayModal(type, date) {
     h += '<div style="max-height:50vh;overflow-y:auto;padding-right:4px">';
     records.forEach(function(r) {
         h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;margin-bottom:6px;background:var(--card-h);border:1px solid var(--bd);border-radius:8px">';
+
+        // 左侧：品名和数量
         h += '<div style="flex:1;min-width:0">';
         h += '<div style="font-size:.84rem;font-weight:600">' + r.item.name + '</div>';
         if (type === 'tea') {
@@ -3932,14 +5598,101 @@ function showInvDayModal(type, date) {
             h += '<div style="font-size:.72rem;color:var(--tx-m);margin-top:2px">' + (r.sale.qty || 0) + unit + '</div>';
         }
         h += '</div>';
+
+        // 右侧：金额 + 编辑/删除按钮
+        h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">';
         h += '<span style="font-size:.88rem;font-weight:700;color:var(--ac)">¥' + fmtC(r.sale.amount || 0) + '</span>';
+        h += '<button class="btn s" onclick="closeModal();editInvSale(\'' + type + '\',\'' + r.item.id + '\',' + r.si + ')">编</button>';
+        h += '<button class="btn s d" onclick="delInvSaleConfirm(\'' + type + '\',\'' + r.item.id + '\',' + r.si + ',\'' + date + '\')">删</button>';
+        h += '</div>';
+
         h += '</div>';
     });
     h += '</div>';
 
-    h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 550);
 }
+
+// 删除销售记录（带确认）
+function delInvSaleConfirm(type, itemId, si, date) {
+    var item = DB[INV[type].key].find(function(i) { return i.id === itemId; });
+    if (!item || !item.sales[si]) return;
+    var s = item.sales[si];
+    var desc = type === 'tea'
+        ? (s.cups || 0) + '杯+' + (s.pots || 0) + '壶 ¥' + fmtC(s.amount || 0)
+        : (s.qty || 0) + (type === 'cig' ? '包' : '瓶') + ' ¥' + fmtC(s.amount || 0);
+
+    if (!confirm('删除 ' + item.name + ' 的销售记录？\n' + desc)) return;
+
+    item.sales.splice(si, 1);
+    saveDB();
+    syncInvToDaily(type, date);
+
+    toast('已删除');
+
+    // ★ 先刷新库存页面，再打开明细弹窗
+    closeModal();
+    rInv(type);
+    setTimeout(function() { showInvDayModal(type, date); }, 150);
+}
+
+// 编辑销售记录
+function editInvSale(type, itemId, si) {
+    var item = DB[INV[type].key].find(function(i) { return i.id === itemId; });
+    if (!item || !item.sales[si]) return;
+    var s = item.sales[si];
+
+    var h = '<h3>编辑销售 · ' + item.name + '</h3>';
+
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="esi_date" type="date" value="' + s.date + '" style="max-width:160px"></div>';
+
+    if (type === 'tea') {
+        h += '<div class="hrow"><label>杯数</label><input class="inp" id="esi_cups" type="number" value="' + (s.cups || 0) + '" style="max-width:80px">';
+        h += '<label>壶数</label><input class="inp" id="esi_pots" type="number" value="' + (s.pots || 0) + '" style="max-width:80px"></div>';
+    } else {
+        h += '<div class="hrow"><label>数量</label><input class="inp" id="esi_qty" type="number" step="0.01" value="' + (s.qty || 0) + '" style="max-width:80px"></div>';
+    }
+
+    h += '<div class="hrow"><label>金额</label><input class="inp" id="esi_amount" type="number" step="0.01" value="' + (s.amount || 0) + '" style="max-width:120px"></div>';
+
+    h += '<div class="brow" style="margin-top:14px;justify-content:flex-end">';
+    h += '<button class="btn p" onclick="saveEditInvSale(\'' + type + '\',\'' + itemId + '\',' + si + ')">保存</button>';
+    h += '<button class="btn" onclick="closeModal()">取消</button>';
+    h += '</div>';
+
+    showModal(h, 450);
+}
+
+// 保存编辑后的销售记录
+function saveEditInvSale(type, itemId, si) {
+    var item = DB[INV[type].key].find(function(i) { return i.id === itemId; });
+    if (!item || !item.sales[si]) return;
+
+    var oldDate = item.sales[si].date;
+    var newDate = $id('esi_date').value;
+    item.sales[si].date = newDate;
+
+    if (type === 'tea') {
+        item.sales[si].cups = parseInt($id('esi_cups').value) || 0;
+        item.sales[si].pots = parseInt($id('esi_pots').value) || 0;
+    } else {
+        item.sales[si].qty = parseFloat($id('esi_qty').value) || 0;
+    }
+
+    item.sales[si].amount = parseFloat($id('esi_amount').value) || 0;
+    saveDB();
+    syncInvToDaily(type, oldDate);
+    if (oldDate !== newDate) syncInvToDaily(type, newDate);
+
+    toast('已保存');
+
+    // ★ 先刷新库存页面，再打开明细弹窗
+    closeModal();
+    rInv(type);
+    setTimeout(function() { showInvDayModal(type, newDate); }, 150);
+}
+
 
 // ------ 库存详情 ------
 
@@ -3984,7 +5737,8 @@ function invDetail(type, itemId) {
             }
             h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;margin-bottom:4px;background:var(--card-h);border:1px solid var(--bd-l);border-radius:6px">';
             h += '<div style="flex:1;min-width:0">';
-            h += '<span style="font-size:.72rem;font-weight:600;padding:1px 4px;border-radius:3px;background:' + (r.kind === 'sale' ? 'var(--ac)' : 'var(--gn)') + ';color:#fff;margin-right:4px">' + (r.kind === 'sale' ? '售' : r.data.qty >= 0 ? '入' : '出') + '</span>';
+            h += '<span style="font-size:.72rem;font-weight:600;padding:1px 4px;border-radius:3px;background:' + (r.kind === 'sale' ? 'var(--ac)' : 'var(--gn)') + ';color:#fff;margin-right:4px">' + (r.kind === 'sale' ? '售' : '入') + '</span>';
+            h += '<span style="font-size:.6rem;color:var(--tx-m);background:var(--card);border:1px solid var(--bd-l);border-radius:3px;padding:1px 4px;margin-right:4px">' + (r.source || '') + '</span>';
             if (r.kind === 'sale') {
                 if (type === 'tea') h += '<span style="font-size:.72rem;color:var(--tx-m)">' + (r.data.cups || 0) + '杯 · ' + (r.data.pots || 0) + '壶</span>';
                 else h += '<span style="font-size:.72rem;color:var(--tx-m)">' + (r.data.qty || 0) + unit + '</span>';
@@ -3995,18 +5749,28 @@ function invDetail(type, itemId) {
             h += '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">';
             h += '<span style="font-size:.82rem;font-weight:700;color:' + (r.kind === 'sale' ? 'var(--ac)' : 'var(--gn)') + '">¥' + fmtC(r.kind === 'sale' ? r.actual : Math.abs(r.data.cost || 0)) + '</span>';
             h += '<button class="btn s" style="font-size:.65rem;padding:2px 8px" onclick="editInvRow(\'' + type + '\',\'' + item.id + '\',\'' + r.kind + '\',' + r.idx + ',\'' + unit + '\')">编</button>';
+            h += '<button class="btn s d" style="font-size:.65rem;padding:2px 8px" onclick="delInvRow(\'' + type + '\',\'' + item.id + '\',\'' + r.kind + '\',' + r.idx + ')">删</button>';
             h += '</div></div>';
         });
     }
 
     h += '</div>';
-    h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 550);
 }
+
 
 // 构建进销存记录列表（销售+出入库按日期排序）
 function buildRecords(item, type, ym) {
     var allRecords = [];
+
+    // 查找对应日期的手动出库备注
+    var manualNotes = {};
+    (item.purchases || []).forEach(function(p) {
+        if (p.qty < 0 && p.source !== '日报' && p.date.startsWith(ym)) {
+            manualNotes[p.date] = p.reason || p.source || '手动';
+        }
+    });
 
     // 销售记录
     item.sales.forEach(function(s, idx) {
@@ -4017,19 +5781,28 @@ function buildRecords(item, type, ym) {
         } else {
             expected = (s.qty || 0) * (item.pricePerUnit || 0);
         }
-        allRecords.push({ date: s.date, kind: 'sale', idx: idx, data: s, expected: expected, actual: s.amount || 0 });
+        var source = manualNotes[s.date] || '日报';
+        allRecords.push({ date: s.date, kind: 'sale', idx: idx, data: s, source: source, expected: expected, actual: s.amount || 0 });
     });
 
-    // 出入库记录
+    // 出入库记录（入库 + 无sales对应的手动出库）
+    var saleDates = {};
+    item.sales.forEach(function(s) { if (s.date.startsWith(ym)) saleDates[s.date] = true; });
+
     (item.purchases || []).forEach(function(m, idx) {
         if (!m.date.startsWith(ym)) return;
-        allRecords.push({ date: m.date, kind: 'move', idx: idx, data: m, expected: 0, actual: m.qty >= 0 ? (m.cost || 0) : -(m.cost || 0) });
+        if (m.source === '日报') return;
+        if (m.qty >= 0) {
+            allRecords.push({ date: m.date, kind: 'move', idx: idx, data: m, source: m.source || '', expected: 0, actual: m.cost || 0 });
+        } else if (!saleDates[m.date]) {
+            allRecords.push({ date: m.date, kind: 'sale', idx: idx, data: { qty: Math.abs(m.qty), amount: 0 }, source: m.reason || m.source || '手动', expected: 0, actual: 0 });
+        }
     });
 
-    // 按日期排序
     allRecords.sort(function(a, b) { return a.date.localeCompare(b.date); });
     return allRecords;
 }
+
 
 // ------ 销售/出入库明细表格 ------
 
@@ -4174,7 +5947,7 @@ function editInvRow(type, itemId, rowType, idx, unit) {
         h += '<div class="hrow"><label>数量</label><input class="inp" id="eir_qty" type="number" step="any" style="max-width:100px" value="' + Math.abs(m.qty) + '">' + unit + '</div>';
         h += '<div class="hrow"><label>来源</label><input class="inp" id="eir_src" value="' + (m.source || '') + '" style="max-width:160px">';
         h += '<label>单价</label><input class="inp" id="eir_cost" type="number" step="0.01" value="' + (m.cost || 0) + '" style="max-width:100px">元</div>';
-        h += '<div class="brow" style="margin-top:14px"><button class="btn p" onclick="doEditInvMove(\'' + type + '\',\'' + itemId + '\',' + idx + ')">保存</button>';
+        h += '<div class="brow" style="margin-top:14px;justify-content:flex-end"><button class="btn p" onclick="doEditInvMove(\'' + type + '\',\'' + itemId + '\',' + idx + ')">保存</button>';
         h += '<button class="btn" onclick="closeModal()">取消</button></div>';
         showModal(h);
     } else {
@@ -4195,7 +5968,7 @@ function editInvRow(type, itemId, rowType, idx, unit) {
             h += ' 应收:<input class="inp" id="eir_exp" type="number" step="0.01" style="max-width:90px;background:var(--card-h)" readonly value="' + exp2 + '"></div>';
         }
         h += '<div class="hrow"><label>实收</label><input class="inp" id="eir_samt" type="number" step="0.01" style="max-width:100px" value="' + (s.amount || 0) + '">元</div>';
-        h += '<div class="brow" style="margin-top:14px"><button class="btn p" onclick="doEditInvSale(\'' + type + '\',\'' + itemId + '\',' + idx + ')">保存</button>';
+        h += '<div class="brow" style="margin-top:14px;justify-content:flex-end"><button class="btn p" onclick="doEditInvSale(\'' + type + '\',\'' + itemId + '\',' + idx + ')">保存</button>';
         h += '<button class="btn" onclick="closeModal()">取消</button></div>';
         showModal(h);
     }
@@ -4363,7 +6136,7 @@ function invMoveAll(type, dir) {
     h += '</select></div>';
     h += '<div class="hrow"><label>日期</label><input class="inp" id="mvDate" type="date" value="' + td() + '" style="max-width:150px"></div>';
     h += '<div id="mvFields"></div>';
-    h += '<div class="brow" style="margin-top:12px"><button class="btn p" onclick="doInvMoveAll(\'' + type + '\',' + dir + ')">' + title + '</button>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn p" onclick="doInvMoveAll(\'' + type + '\',' + dir + ')">' + title + '</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button></div>';
     showModal(h);
     updateMvF(type, dir);
@@ -4518,9 +6291,12 @@ function doInvMove(type, id, dir) {
             upd(function(db) {
                 var it2 = db[cfg.key].find(function(i) { return i.id === id; });
                 if (!it2) return;
-                it2.purchases.push({ date: date, qty: -stockUsed, source: reason });
                 it2.sales.push({ date: date, cups: cups, pots: pots, expectedAmount: expected, amount: amount });
             });
+
+            // ★ 同步日报
+            syncInvToDaily(type, date);
+
             closeModal();
             toast('销售 ' + cups + '杯' + pots + '壶 应收:' + expected.toFixed(2) + ' 实收:' + amount.toFixed(2));
         } else if (type === 'cig') {
@@ -4530,9 +6306,12 @@ function doInvMove(type, id, dir) {
             upd(function(db) {
                 var it = db[cfg.key].find(function(i) { return i.id === id; });
                 if (!it) return;
-                it.purchases.push({ date: date, qty: -qty, source: reason });
                 it.sales.push({ date: date, qty: qty, amount: amount });
             });
+
+            // ★ 同步日报
+            syncInvToDaily(type, date);
+
             closeModal();
             toast('销售 ' + qty + '包 ' + amount.toFixed(2) + '元');
         } else {
@@ -4542,9 +6321,12 @@ function doInvMove(type, id, dir) {
             upd(function(db) {
                 var it = db[cfg.key].find(function(i) { return i.id === id; });
                 if (!it) return;
-                it.purchases.push({ date: date, qty: -qty, source: reason });
                 it.sales.push({ date: date, qty: qty, amount: amount });
             });
+
+            // ★ 同步日报
+            syncInvToDaily(type, date);
+
             closeModal();
             toast('销售 ' + qty + '瓶 ' + amount.toFixed(2) + '元');
         }
@@ -4573,6 +6355,100 @@ function autoCalcCost(mode) {
         var ov = parseFloat($id('ai_ov_p').value) || 0;
         if (os > 0 && ov > 0) $id('ai_cpp').value = (Math.round(ov / os * 100) / 100).toFixed(2);
     }
+}
+
+// FIFO 月度销售成本（通用：茗茶/香烟/酒类）
+function calcFIFOMonthlyCost(item, type, ym) {
+    var queue = [];
+    var unit = type === 'tea' ? '克' : type === 'cig' ? '包' : '瓶';
+
+    // 1. 期初入队
+    var openingQty = item.openingStock || 0;
+    var openingUnitCost = 0;
+    if (type === 'tea') {
+        openingUnitCost = item.costPerGram || 0;
+    } else {
+        openingUnitCost = item.costPerUnit || (openingQty > 0 ? (item.openingCost || 0) / openingQty : 0);
+    }
+    if (openingQty > 0) {
+        queue.push({ qty: openingQty, unitCost: openingUnitCost });
+    }
+
+    // 2. 按日期顺序处理所有记录（入库+销售）
+    var allEvents = [];
+
+    // 入库事件
+    (item.purchases || []).forEach(function(p) {
+        if (p.qty > 0) {
+            var uc = p.cost ? p.cost / p.qty : openingUnitCost;
+            allEvents.push({ date: p.date, type: 'in', qty: p.qty, unitCost: uc });
+        }
+    });
+
+    // 销售事件
+    (item.sales || []).forEach(function(s) {
+        var consumeQty = 0;
+        if (type === 'tea') {
+            consumeQty = (s.cups || 0) * (item.gramsPerCup || 0) + (s.pots || 0) * (item.gramsPerPot || 0);
+        } else {
+            consumeQty = s.qty || 0;
+        }
+        if (consumeQty > 0) {
+            allEvents.push({ date: s.date, type: 'out', qty: consumeQty, saleAmount: s.amount || 0 });
+        }
+    });
+
+    // 按日期排序（同一天先入库再销售）
+    allEvents.sort(function(a, b) {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.type === 'in' ? -1 : 1;
+    });
+
+    // 3. 逐日处理
+    var monthCost = 0, monthRevenue = 0, monthConsume = 0;
+
+    allEvents.forEach(function(ev) {
+        if (ev.type === 'in') {
+            queue.push({ qty: ev.qty, unitCost: ev.unitCost });
+        } else {
+            // FIFO 扣减
+            var remaining = ev.qty;
+            var saleCost = 0;
+            while (remaining > 0 && queue.length > 0) {
+                if (queue[0].qty <= remaining) {
+                    saleCost += queue[0].qty * queue[0].unitCost;
+                    remaining -= queue[0].qty;
+                    queue.shift();
+                } else {
+                    saleCost += remaining * queue[0].unitCost;
+                    queue[0].qty -= remaining;
+                    remaining = 0;
+                }
+            }
+            // 只统计指定月份的
+            if (ev.date.startsWith(ym)) {
+                monthCost += saleCost;
+                monthRevenue += ev.saleAmount;
+                monthConsume += ev.qty;
+            }
+        }
+    });
+
+    // 4. 结存
+    var remainQty = 0, remainValue = 0;
+    queue.forEach(function(e) {
+        remainQty += e.qty;
+        remainValue += e.qty * e.unitCost;
+    });
+
+    return {
+        cost: Math.round(monthCost * 100) / 100,
+        revenue: monthRevenue,
+        profit: Math.round((monthRevenue - monthCost) * 100) / 100,
+        consume: Math.round(monthConsume * 100) / 100,
+        remainQty: Math.round(remainQty * 100) / 100,
+        remainValue: Math.round(remainValue * 100) / 100
+    };
 }
 
 // 弹窗添加/编辑库存商品（茗茶支持克/包两种模式）
@@ -4648,7 +6524,7 @@ function showAddInv(type, itemId) {
         h += '<span style="font-size:.74rem;color:var(--tx-s)">1箱 = <input class="inp" id="ai_cr" type="number" style="width:50px;display:inline-block;padding:3px 6px" value="' + (isEdit ? (item.purchaseConvRatio || 12) : 12) + '"> 瓶</span></div>';
     }
 
-    h += '<div class="brow" style="margin-top:16px"><button class="btn p" onclick="doAddInv(\'' + type + '\'' + (isEdit ? ',\'' + itemId + '\'' : '') + ')">' + (isEdit ? '保存修改' : '添加') + '</button>';
+    h += '<div class="brow" style="margin-top:16px;justify-content:flex-end"><button class="btn p" onclick="doAddInv(\'' + type + '\'' + (isEdit ? ',\'' + itemId + '\'' : '') + ')">' + (isEdit ? '保存修改' : '添加') + '</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button></div>';
     showModal(h);
 }
@@ -4925,7 +6801,7 @@ function showAddWH() {
     h += '<label>安全库存</label><input class="inp" id="wh_ss" type="number" value="0" style="max-width:80px">';
     h += '<span style="font-size:.72rem;color:var(--tx-m)">低于此数提醒</span>';
     h += '</div>';
-    h += '<div class="brow" style="margin-top:12px">';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<button class="btn p" onclick="doAddWH()">添加</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button>';
     h += '</div>';
@@ -4971,7 +6847,7 @@ function showEditWH(id) {
     h += '<label>安全库存</label><input class="inp" id="ewh_ss" type="number" style="max-width:80px" value="' + (item.safeStock || 0) + '">';
     h += '<span style="font-size:.72rem;color:var(--tx-m)">低于此数提醒</span>';
     h += '</div>';
-    h += '<div class="brow" style="margin-top:12px">';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<button class="btn p" onclick="doEditWH(\'' + id + '\')">保存</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button>';
     h += '</div>';
@@ -5022,7 +6898,7 @@ function whMoveAll(dir) {
     h += '<div class="hrow"><label>日期</label><input class="inp" id="whDate" type="date" value="' + td() + '" style="max-width:150px"></div>';
     h += '<div class="hrow"><label>数量</label><input class="inp" id="whQty" type="number" style="max-width:100px"></div>';
     h += '<div class="hrow"><label>' + (dir > 0 ? '来源' : '原因') + '</label><input class="inp" id="whReason" style="max-width:150px"></div>';
-    h += '<div class="brow" style="margin-top:12px">';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<button class="btn p" onclick="doWhMoveAll(' + dir + ')">' + title + '</button>';
     h += '<button class="btn" onclick="closeModal()">取消</button>';
     h += '</div>';
@@ -5063,27 +6939,98 @@ function whDetail(id) {
         h += '<div style="text-align:center;padding:20px;color:var(--tx-m)">暂无出入库记录</div>';
     } else {
         h += '<div class="tw"><table>';
-        h += '<tr><th>日期</th><th>类型</th><th>数量</th><th>来源/原因</th></tr>';
+        h += '<tr><th>日期</th><th>类型</th><th>数量</th><th>来源/原因</th><th>操作</th></tr>';
 
-        moves.forEach(function(m) {
+        moves.forEach(function(m, idx) {
             var isIn = m.qty > 0;
+            var origIdx = item.movements.indexOf(m);
             h += '<tr>';
             h += '<td>' + m.date + '</td>';
             h += '<td><span class="badge ' + (isIn ? 'gn' : 'rd') + '">' + (isIn ? '入库' : '出库') + '</span></td>';
             h += '<td class="nr">' + Math.abs(m.qty) + item.unit + '</td>';
             h += '<td>' + (m.reason || '-') + '</td>';
+            h += '<td>';
+            h += '<button class="btn s" onclick="editWHMove(\'' + id + '\',' + origIdx + ')">编</button> ';
+            h += '<button class="btn s d" onclick="delWHMove(\'' + id + '\',' + origIdx + ')">×</button>';
+            h += '</td>';
             h += '</tr>';
         });
 
         h += '<tr style="background:var(--card-h)">';
         h += '<td style="font-weight:600">当前库存</td>';
-        h += '<td colspan="3" class="nr" style="font-weight:600">' + item.stock + item.unit + '</td>';
+        h += '<td colspan="4" class="nr" style="font-weight:600">' + item.stock + item.unit + '</td>';
         h += '</tr>';
         h += '</table></div>';
     }
 
-    h += '<div class="brow" style="margin-top:12px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h);
+}
+
+// 编辑出入库记录
+function editWHMove(id, idx) {
+    var item = DB.whItems.find(function(i) { return i.id === id; });
+    if (!item || !item.movements[idx]) return;
+    var m = item.movements[idx];
+
+    var h = '<h3>编辑出入库 · ' + item.name + '</h3>';
+    h += '<div class="hrow"><label>日期</label><input class="inp" id="ewm_date" type="date" value="' + m.date + '" style="max-width:150px"></div>';
+    h += '<div class="hrow"><label>类型</label><select class="inp" id="ewm_type" style="max-width:100px">';
+    h += '<option value="1"' + (m.qty > 0 ? ' selected' : '') + '>入库</option>';
+    h += '<option value="-1"' + (m.qty < 0 ? ' selected' : '') + '>出库</option>';
+    h += '</select></div>';
+    h += '<div class="hrow"><label>数量</label><input class="inp" id="ewm_qty" type="number" step="any" value="' + Math.abs(m.qty) + '" style="max-width:120px">';
+    h += '<span style="font-size:.78rem;color:var(--tx-m)">' + item.unit + '</span></div>';
+    h += '<div class="hrow"><label>原因</label><input class="inp" id="ewm_reason" value="' + (m.reason || '') + '" style="flex:1"></div>';
+
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
+    h += '<button class="btn p" onclick="saveWHMove(\'' + id + '\',' + idx + ')">保存</button>';
+    h += '<button class="btn" onclick="closeModal();setTimeout(function(){whDetail(\'' + id + '\')},100)">取消</button>';
+    h += '</div>';
+
+    showModal(h, 450);
+}
+
+// 保存编辑
+function saveWHMove(id, idx) {
+    var item = DB.whItems.find(function(i) { return i.id === id; });
+    if (!item || !item.movements[idx]) return;
+
+    var oldQty = item.movements[idx].qty;
+    var dir = parseInt($id('ewm_type').value);
+    var newQty = Math.abs(parseFloat($id('ewm_qty').value) || 0) * dir;
+
+    // 更新库存：先减旧的，再加新的
+    item.stock = item.stock - oldQty + newQty;
+    item.stock = Math.round(item.stock * 100) / 100;
+
+    item.movements[idx].date = $id('ewm_date').value;
+    item.movements[idx].qty = newQty;
+    item.movements[idx].reason = $id('ewm_reason').value.trim();
+
+    saveDB();
+    closeModal();
+    toast('已更新');
+    setTimeout(function() { whDetail(id); }, 100);
+}
+
+// 删除出入库记录
+function delWHMove(id, idx) {
+    var item = DB.whItems.find(function(i) { return i.id === id; });
+    if (!item || !item.movements[idx]) return;
+
+    var m = item.movements[idx];
+    var desc = (m.qty > 0 ? '入库' : '出库') + ' ' + Math.abs(m.qty) + item.unit;
+    if (!confirm('删除这条' + desc + '记录？')) return;
+
+    // 减去该记录的库存影响
+    item.stock = item.stock - m.qty;
+    item.stock = Math.round(item.stock * 100) / 100;
+
+    item.movements.splice(idx, 1);
+    saveDB();
+    toast('已删除');
+    setTimeout(function() { whDetail(id); }, 100);
 }
 
 // ==================== 12. 报损 ====================
@@ -5448,6 +7395,8 @@ function rReport() {
         s.innerHTML = sh;
         setTimeout(function() { initRepCharts(id); }, 100);
     }
+
+    setTimeout(function() { switchRepTab('profit'); }, 100);
 }
 
 // ==================== 利润表 ====================
@@ -5463,9 +7412,9 @@ function renderProfitTable(net, gross, discount, kitC, barC, outC, teaC, cigC, a
         { l: '  厨房采购', v: kitC, n: '' },
         { l: '  吧台采购', v: barC, n: '' },
         { l: '  外场采购', v: outC, n: '' },
-        { l: '  茗茶FIFO成本', v: teaC, n: '' },
+        { l: '  茗茶库存价值', v: teaC, n: '' },
         { l: '  香烟销售成本', v: cigC, n: '' },
-        { l: '  酒类FIFO成本', v: alcC, n: '' }
+        { l: '  酒类库存价值', v: alcC, n: '' }
     ];
     if (otherC > 0) rows.push({ l: '  其他采购', v: otherC, n: '' });
     rows.push({ l: '毛利', v: gp, n: '毛利率 ' + gm.toFixed(1) + '%' });
@@ -5680,7 +7629,7 @@ function renderTeaSection(stats, rev, cost, profit, ym) {
     h += '<h4 style="font-size:.88rem;color:var(--ac);margin-bottom:6px">六、茗茶进销存及毛利</h4>';
     h += '<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:14px">';
     h += '本月销售' + totalCups + '杯+' + totalPots + '壶，实收' + fmtC(rev) + '元，';
-    h += 'FIFO成本' + fmtC(cost) + '元，毛利' + fmtC(profit) + '元（' + (rev > 0 ? (profit / rev * 100).toFixed(1) : '0') + '%）。';
+    h += '库存价值' + fmtC(cost) + '元，毛利' + fmtC(profit) + '元（' + (rev > 0 ? (profit / rev * 100).toFixed(1) : '0') + '%）。';
     h += '</div></div>';
 
     h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:14px">';
@@ -6373,14 +8322,14 @@ function rData() {
     } else {
         h += '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px">';
         h += '<p style="font-size:.74rem;color:var(--gn)">已连接 · Gist: ' + (_gh.gistId || '创建中') + '</p>';
-        h += '<div class="brow"><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button>';
+        h += '<div class="brow" ><button class="btn" onclick="ghSave().then(function(){toast(\'已同步\')})">同步</button>';
         h += '<button class="btn d s" onclick="ghDisconnect()">断开</button></div>';
         h += '</div>';
     }
 
     // 数据码
     h += '<div class="sec">数据码</div>';
-    h += '<div class="brow"><button class="btn" onclick="genSyncCode()">生成</button>';
+    h += '<div class="brow" ><button class="btn" onclick="genSyncCode()">生成</button>';
     h += '<button class="btn" onclick="importSyncCode()">导入</button></div>';
 
     // 数据统计
@@ -6390,17 +8339,17 @@ function rData() {
     h += '<div class="card"><div class="card-l">费用</div><div class="card-v">' + DB.expenses.length + '</div></div>';
     h += '<div class="card"><div class="card-l">仓库</div><div class="card-v">' + (DB.whItems || []).length + '</div></div></div>';
 
-    h += '<div class="brow"><button class="btn" onclick="expJSON()">导出JSON</button>';
+    h += '<div class="brow" ><button class="btn" onclick="expJSON()">导出JSON</button>';
     h += '<input type="file" id="impF" accept=".json" style="display:none" onchange="impJSON(event)">';
     h += '<button class="btn" onclick="document.getElementById(\'impF\').click()">导入</button></div>';
 
     // 示例数据
     h += '<div class="sec">示例</div>';
-    h += '<div class="brow"><button class="btn" onclick="loadSample()">加载示例</button></div>';
+    h += '<div class="brow" ><button class="btn" onclick="loadSample()">加载示例</button></div>';
 
     // 危险操作
     h += '<div class="sec" style="color:var(--rd)">危险</div>';
-    h += '<div class="brow"><button class="btn d" onclick="if(confirm(\'清空全部数据？此操作不可恢复！\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';
+    h += '<div class="brow" ><button class="btn d" onclick="if(confirm(\'清空全部数据？此操作不可恢复！\')){DB=initDB();DB._ts=Date.now();saveDB(DB);ghScheduleSave();toast(\'已清空\');rData()}">清空全部</button></div>';
 
     setMain('设置', h);
 }
@@ -6861,7 +8810,7 @@ function showAIHistory() {
 
     if (!history.length) {
         h += '<div style="text-align:center;padding:30px;color:var(--tx-m)">暂无历史记录</div>';
-        h += '<div class="brow"><button class="btn" onclick="closeModal()">关闭</button></div>';
+        h += '<div class="brow" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
         showModal(h, 650);
         return;
     }
@@ -6908,7 +8857,7 @@ function showAIHistory() {
 
     h += '</div>';
 
-    h += '<div class="brow" style="margin-top:12px">';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<button class="btn d" onclick="clearAIHistory()">清空全部</button>';
     h += '<button class="btn" onclick="closeModal()">关闭</button></div>';
 
@@ -6932,7 +8881,7 @@ function showAIHistoryDetail(idx) {
         h += '<div class="brow" style="margin-top:10px"><button class="btn p" onclick="window._aiReport={title:DB.aiHistory[' + idx + '].title,content:DB.aiHistory[' + idx + '].content};exportReportPDF()">导出PDF</button></div>';
     }
 
-    h += '<div class="brow" style="margin-top:10px"><button class="btn" onclick="closeModal()">关闭</button></div>';
+    h += '<div class="brow" style="margin-top:10px;justify-content:flex-end"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 650);
 }
 
@@ -7134,7 +9083,7 @@ function doAIParseGo() {
 function aiDailyParse() {
     var h = '<h3>智能日报解析</h3>';
     h += '<textarea id="aiDailyText" class="inp" placeholder="粘贴日报文字...&#10;支持口语化表述" style="width:100%;min-height:150px"></textarea>';
-    h += '<div class="brow" style="margin-top:10px"><button class="btn p" onclick="doAiDailyParse()">AI解析</button></div>';
+    h += '<div class="brow" style="margin-top:10px;justify-content:flex-end"><button class="btn p" onclick="doAiDailyParse()">AI解析</button></div>';
     h += '<div id="aiDailyResult"></div>';
     showModal(h, 600);
 }
@@ -7173,7 +9122,7 @@ function showAiDailyConfirm(data) {
     h += '<div class="hrow"><label>人数</label><input class="inp" id="aid_count" type="number" value="' + (g.count || 0) + '"><label>人均</label><input class="inp" id="aid_avg" type="number" value="' + (g.avgSpend || 0) + '"></div>';
     h += '<div class="hrow"><label>汇报人</label><input class="inp" id="aid_reporter" value="' + (data.reporter || '') + '"></div>';
     h += '</div>';
-    h += '<div class="brow" style="margin-top:12px"><button class="btn p" onclick="saveAiDaily()">覆盖保存</button><button class="btn g" onclick="saveAiDaily(\'merge\')">合并保存</button><button class="btn" onclick="closeModal()">取消</button></div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end"><button class="btn p" onclick="saveAiDaily()">覆盖保存</button><button class="btn g" onclick="saveAiDaily(\'merge\')">合并保存</button><button class="btn" onclick="closeModal()">取消</button></div>';
     showModal(h, 550);
 }
 
@@ -7233,6 +9182,7 @@ function aiDiagMenu() {
     h += aiCard('📦', '补货建议', '根据库存和消耗速度预测补货', 'aiRestockAlert()');
     h += aiCard('🛒', '采购优化', '分析采购模式，给出优化建议', 'aiPurchaseAdvice()');
     h += '</div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<div class="brow"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 500);
 }
@@ -7286,6 +9236,7 @@ function aiReportMenu() {
     h += aiCard('📊', '月度经营报告', 'AI生成月度分析报告，可导出PDF', 'aiMonthlyReport()');
     h += aiCard('💡', '经营分析建议', '分析趋势，给出战略建议', 'aiBusinessAnalysis()');
     h += '</div>';
+    h += '<div class="brow" style="margin-top:12px;justify-content:flex-end">';
     h += '<div class="brow"><button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 500);
 }
@@ -7319,7 +9270,7 @@ function aiBusinessAnalysis() {
 function showAIResult(title, content, showExport) {
     var h = '<h3>' + title + '</h3>';
     h += '<div style="max-height:55vh;overflow-y:auto;padding:12px;background:var(--card-h);border:1px solid var(--bd);border-radius:var(--r);font-size:.82rem;line-height:1.8">' + md2html(content) + '</div>';
-    h += '<div class="brow" style="margin-top:10px">';
+    h += '<div class="brow" style="margin-top:10px;justify-content:flex-end">';
     if (showExport) h += '<button class="btn p" onclick="exportReportPDF()">导出PDF</button>';
     h += '<button class="btn" onclick="closeModal()">关闭</button></div>';
     showModal(h, 650);
@@ -7600,7 +9551,7 @@ function genSyncCode() {
         var h = '<h3>数据同步码</h3>';
         h += '<div style="font-size:.72rem;color:var(--tx-m);margin-bottom:10px">数据大小：' + (encoded.length / 1024).toFixed(1) + 'KB</div>';
         h += '<textarea id="syncCodeOutput" style="width:100%;height:300px;font-family:monospace;font-size:.7rem;resize:vertical" readonly>' + chunks.join('\n') + '</textarea>';
-        h += '<div class="brow" style="margin-top:10px">';
+        h += '<div class="brow" style="margin-top:10px;justify-content:flex-end">';
         h += '<button class="btn p" onclick="copySyncCode()">复制全部</button>';
         h += '<button class="btn" onclick="closeModal()">关闭</button></div>';
         showModal(h, 600);
@@ -7692,10 +9643,11 @@ function appInit() {
     // 迁移分类数据
     migrateAreaCats();
 
-    // 应用主题和字体
+    // 应用主题 字体 工具栏
     applyTheme();
     applyFonts();
     applySpacing();
+    initToolbar();
 
     // 应用保存的字号
     var savedFS = localStorage.getItem('ax_fs');
@@ -7710,6 +9662,13 @@ function appInit() {
     return localStorage.getItem(k);
     });
     if (hasFont) applyFonts();
+
+    // 点击遮罩层关闭模态框
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'overlay') {
+        closeModal();
+        }
+    });
 
     // 初始化GitHub同步
     ghInit();
@@ -7735,6 +9694,57 @@ function appInit() {
     if (_gh.ready) ghSyncOnStart();
 
     console.log('岸香咖啡经营管理系统初始化完成');
+}
+
+// ---------- 滚动时调整导航栏样式 ----------
+window.addEventListener('scroll', function() {
+  var fnav = $id('fnav');
+  if (!fnav) return;
+  if (window.scrollY > 10) fnav.classList.add('scrolled');
+  else fnav.classList.remove('scrolled');
+});
+
+// ---------- 初始化工具栏 ----------
+function initToolbar() {
+  // 主功能组
+  var mainPages = [
+    { id: 'home', icon: '◉', label: '概览' },
+    { id: 'daily', icon: '✎', label: '日报', badge: true },
+    { id: 'purchase', icon: '⊞', label: '采购' },
+    { id: 'damage', icon: '⊡', label: '报损' }
+  ];
+  // 库存组
+  var invPages = [
+    { id: 'tea', icon: '◈', label: '茗茶' },
+    { id: 'cig', icon: '◆', label: '香烟' },
+    { id: 'alc', icon: '◇', label: '酒类' },
+    { id: 'wh', icon: '▦', label: '仓库' }
+  ];
+  // 报告组
+  var reportPages = [
+    { id: 'report', icon: '▤', label: '报告' },
+    { id: 'gen', icon: '▥', label: '汇报' }
+  ];
+
+  function renderGroup(pages, containerId) {
+    var el = $id(containerId);
+    if (!el) return;
+    el.innerHTML = pages.map(function(p) {
+      return '<button class="toolbar-btn" data-page="' + p.id + '" onclick="goPage(\'' + p.id + '\')" title="' + p.label + '">' +
+        '<span class="ticon">' + p.icon + '</span>' +
+        '<span class="tlabel">' + p.label + '</span>' +
+        (p.badge ? '<span class="badge-dot"></span>' : '') +
+        '</button>';
+    }).join('');
+  }
+
+  renderGroup(mainPages, 'toolbarMain');
+  renderGroup(invPages, 'toolbarInv');
+  renderGroup(reportPages, 'toolbarReport');
+
+  // 默认高亮第一个
+  var first = $id('toolbarMain').querySelector('.toolbar-btn');
+  if (first) first.classList.add('active');
 }
 
 // ---------- 页面加载完成后启动 ----------
